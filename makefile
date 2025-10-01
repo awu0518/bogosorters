@@ -1,5 +1,8 @@
 include common.mk
 
+PYTHONPATH := $(CURDIR)
+export PYTHONPATH
+
 # Our directories
 API_DIR = server
 DB_DIR = data
