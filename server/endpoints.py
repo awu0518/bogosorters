@@ -45,4 +45,4 @@ class Endpoints(Resource):
         The `get()` method will return a sorted list of available endpoints.
         """
         endpoints = sorted(rule.rule for rule in api.app.url_map.iter_rules())
-        return {"Available endpoints": endpoints}
+        return {ENDPOINT_RESP: endpoints}
