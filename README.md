@@ -17,4 +17,5 @@ This is an API server for a geographic database. It supports CRUD operations on 
 # Contributors
 
 * Mingjian Li (ml8347@nyu.edu)
+* Nilay Dey (nd2481@nyu.edu)
 (more to be added)
