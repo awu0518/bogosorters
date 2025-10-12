@@ -46,3 +46,6 @@ class Endpoints(Resource):
         """
         endpoints = sorted(rule.rule for rule in api.app.url_map.iter_rules())
         return {ENDPOINT_RESP: endpoints}
+
+if __name__ == '__main__':
+    app.run(debug=True)
