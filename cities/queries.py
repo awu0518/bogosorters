@@ -4,6 +4,10 @@ This file deals with our city-level data.
 
 MIN_ID_LEN = 1
 
+ID = 'id'
+NAME = 'name'
+STATE_CODE = 'state_code'
+
 city_cache = { }
 
 # Returns if a given ID is a valid city ID.
