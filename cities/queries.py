@@ -1,6 +1,7 @@
 """
 This file deals with our city-level data.
 """
+from random import randint
 
 MIN_ID_LEN = 1
 
@@ -9,6 +10,17 @@ NAME = 'name'
 STATE_CODE = 'state_code'
 
 city_cache = { }
+
+# db connection placeholder
+def db_connect(success_ratio: int) -> bool:
+    """
+    Return True if connected, False if not.
+    Simulates database connection with configurable success rate.
+    
+    Returns:
+        bool: True if connection succeeds, False otherwise
+    """
+    return randint(1, success_ratio) % success_ratio == 0
 
 # Returns if a given ID is a valid city ID.
 def is_valid_id(_id: str) -> bool:
