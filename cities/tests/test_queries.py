@@ -61,3 +61,8 @@ def test_create_multiple_cities(clear_city_cache):
     assert cq.city_cache["1"] == city1
     assert cq.city_cache["2"] == city2
     assert cq.num_cities() == 2
+
+@patch('cities.queries.db_connect', return_value=True, autospec=True)
+def test_delete(mock_db_connect, temp_city):
+    cq.delete(temp_city)
+    assert temp_city not in cq.read()
