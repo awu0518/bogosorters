@@ -41,3 +41,9 @@ def create(flds: dict) -> str:
     new_id = str(len(city_cache) + 1)
     city_cache[new_id] = flds
     return new_id
+
+def delete(city_id: str) -> bool:
+    if city_id not in city_cache:
+        raise ValueError(f'No such city: {city_id}')
+    del city_cache[city_id]
+    return True
