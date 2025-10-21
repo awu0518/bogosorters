@@ -76,6 +76,13 @@ def delete(collection: str, filt: dict, db=SE_DB):
 
 
 def update(collection, filters, update_dict, db=SE_DB):
+    if client is None:
+        try:
+            connect_db()
+        except Exception as e:
+            print(f"Client is not connected: {e}")
+            return None 
+    
     return client[db][collection].update_one(filters, {'$set': update_dict})
 
 
