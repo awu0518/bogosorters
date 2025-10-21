@@ -7,6 +7,8 @@ The endpoint called `endpoints` will return all available endpoints.
 from flask import Flask  # , request
 from flask_restx import Resource, Api  # , fields  # Namespace
 from flask_cors import CORS
+import random
+from datetime import datetime
 
 # import werkzeug.exceptions as wz
 
@@ -19,6 +21,10 @@ ENDPOINT_RESP = 'Available endpoints'
 HELLO_EP = '/hello'
 HELLO_RESP = 'hello'
 MESSAGE = 'Message'
+TIMESTAMP_EP = '/timestamp'
+TIMESTAMP_RESP = 'timestamp'
+RANDOM_EP = '/random'
+RANDOM_RESP = 'random_number'
 
 
 @api.route(HELLO_EP)
@@ -46,6 +52,25 @@ class Endpoints(Resource):
         """
         endpoints = sorted(rule.rule for rule in api.app.url_map.iter_rules())
         return {ENDPOINT_RESP: endpoints}
+
+
+@api.route(TIMESTAMP_EP)
+class Timestamp(Resource):
+    """
+    This class returns the current server timestamp.
+    """
+    def get(self):
+        """
+        Returns the current server time in ISO format.
+        """
+        current_time = datetime.now().isoformat()
+        return {
+            TIMESTAMP_RESP: current_time,
+            'unix': datetime.now().timestamp()
+        }
+
+
+
 
 
 if __name__ == '__main__':
