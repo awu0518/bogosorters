@@ -70,7 +70,20 @@ class Timestamp(Resource):
         }
 
 
-
+@api.route(RANDOM_EP)
+class RandomNumber(Resource):
+    """
+    This class generates and returns random numbers.
+    """
+    def get(self):
+        """
+        Returns a random integer between 1 and 100.
+        """
+        return {
+            RANDOM_RESP: random.randint(1, 100),
+            'min': 1,
+            'max': 100
+        }
 
 
 if __name__ == '__main__':
