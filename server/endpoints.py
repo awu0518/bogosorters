@@ -25,6 +25,8 @@ TIMESTAMP_EP = '/timestamp'
 TIMESTAMP_RESP = 'timestamp'
 RANDOM_EP = '/random'
 RANDOM_RESP = 'random_number'
+DICE_EP = '/dice'
+DICE_RESP = 'rolls'
 
 
 @api.route(HELLO_EP)
@@ -83,6 +85,26 @@ class RandomNumber(Resource):
             RANDOM_RESP: random.randint(1, 100),
             'min': 1,
             'max': 100
+        }
+
+
+@api.route(DICE_EP)
+class DiceRoller(Resource):
+    """
+    This class simulates rolling dice.
+    """
+    def get(self):
+        """
+        Simulates rolling 2 six-sided dice and returns the results.
+        """
+        num_dice = 2
+        sides = 6
+        rolls = [random.randint(1, sides) for _ in range(num_dice)]
+        return {
+            DICE_RESP: rolls,
+            'total': sum(rolls),
+            'num_dice': num_dice,
+            'sides': sides
         }
 
 
