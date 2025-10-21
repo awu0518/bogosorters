@@ -67,6 +67,12 @@ def read_one(collection, filt, db=SE_DB):
 
 
 def delete(collection: str, filt: dict, db=SE_DB):
+    if client is None:
+        try:
+            connect_db()
+        except Exception as e:
+            print(f"Client is not connected: {e}")
+            return None 
     """
     Find with a filter and return on the first doc found.
     """
