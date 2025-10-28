@@ -34,6 +34,16 @@ def read() -> dict:
     # shallow copy for safety
     return dict(country_cache)
 
+def read_one(country_id: str) -> dict:
+    """
+    Retrieve a single country by ID.
+    Returns a copy of the country data.
+    """
+    if country_id not in country_cache:
+        raise ValueError(f'No such country: {country_id}')
+    # return a copy for safety
+    return dict(country_cache[country_id])
+
 def create(flds: dict) -> str:
     if not isinstance(flds, dict):
         raise ValueError(f'Bad type for {type(flds)=}')

@@ -71,6 +71,25 @@ def test_create_raises_on_missing_name(clear_country_cache):
         cq.create({cq.ISO_CODE: "XX"})
 
 
+def test_read_one_success(temp_country):
+    country = cq.read_one(temp_country)
+    assert country[cq.NAME] == "Freedonia"
+    assert country[cq.ISO_CODE] == "FD"
+
+
+def test_read_one_raises_on_missing(clear_country_cache):
+    with pytest.raises(ValueError, match="No such country"):
+        cq.read_one("999")
+
+
+def test_read_one_returns_copy(temp_country):
+    # Verify that modifying the returned dict doesn't affect the cache
+    country = cq.read_one(temp_country)
+    country[cq.NAME] = "Modified Name"
+    # Original should be unchanged
+    assert cq.read_one(temp_country)[cq.NAME] == "Freedonia"
+
+
 def test_delete_success(temp_country):
     assert cq.delete(temp_country) is True
     assert temp_country not in cq.read()
