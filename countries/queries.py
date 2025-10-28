@@ -48,3 +48,15 @@ def delete(country_id: str) -> bool:
         raise ValueError(f'No such country: {country_id}')
     del country_cache[country_id]
     return True
+
+def update(country_id: str, flds: dict) -> bool:
+    """
+    Update an existing country with new field values.
+    Returns True on success.
+    """
+    if not isinstance(flds, dict):
+        raise ValueError(f'Bad type for {type(flds)=}')
+    if country_id not in country_cache:
+        raise ValueError(f'No such country: {country_id}')
+    country_cache[country_id].update(flds)
+    return True

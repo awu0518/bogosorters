@@ -81,10 +81,24 @@ def test_delete_raises_on_missing(clear_country_cache):
         cq.delete("999")
 
 
-# SKIP: future feature not implemented yet
-@pytest.mark.skip(reason="Feature not yet implemented - update country")
-def test_update_country_future_feature():
-    pass
+def test_update_country_success(temp_country):
+    # Update the country's name
+    new_data = {cq.NAME: "New Freedonia"}
+    assert cq.update(temp_country, new_data) is True
+    updated_country = cq.read()[temp_country]
+    assert updated_country[cq.NAME] == "New Freedonia"
+    # ISO_CODE should remain unchanged
+    assert updated_country[cq.ISO_CODE] == "FD"
+
+
+def test_update_country_raises_on_missing(clear_country_cache):
+    with pytest.raises(ValueError, match="No such country"):
+        cq.update("999", {cq.NAME: "Ghost Country"})
+
+
+def test_update_country_raises_on_bad_type(temp_country):
+    with pytest.raises(ValueError, match="Bad type"):
+        cq.update(temp_country, ["not", "a", "dict"])
 
 
 # PATCH: patch db_connect directly
