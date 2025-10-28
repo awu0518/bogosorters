@@ -33,6 +33,9 @@ def is_valid_id(_id: str) -> bool:
 def num_cities() -> int:
     return len(city_cache)
 
+def read() -> dict:
+    return city_cache
+
 def create(flds: dict) -> str:
     if not isinstance(flds, dict):
         raise ValueError(f'Bad type for {type(flds)=}')
