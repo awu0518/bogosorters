@@ -66,3 +66,9 @@ def test_create_multiple_cities(clear_city_cache):
 def test_delete(mock_db_connect, temp_city):
     cq.delete(temp_city)
     assert temp_city not in cq.read()
+
+@pytest.mark.skip('revive once all functions are cutover!')
+def test_read(temp_city):
+    cities = cq.read()
+    assert isinstance(cities, dict)
+    assert temp_city in cities
