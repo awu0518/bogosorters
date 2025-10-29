@@ -96,6 +96,12 @@ def read(collection, db=SE_DB, no_id=True) -> list:
     """
     Returns a list from the db.
     """
+    if client is None:
+        try:
+            connect_db()
+        except Exception as e:
+            print(f"Client is not connected: {e}")
+            return None
     ret = []
     for doc in client[db][collection].find():
         if no_id:
