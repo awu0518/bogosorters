@@ -121,6 +121,12 @@ def read_dict(collection, key, db=SE_DB, no_id=True) -> dict:
 
 
 def fetch_all_as_dict(key, collection, db=SE_DB):
+    if client is None:
+        try:
+            connect_db()
+        except Exception as e:
+            print(f"Client is not connected: {e}")
+            return None
     ret = {}
     for doc in client[db][collection].find():
         del doc[MONGO_ID]
