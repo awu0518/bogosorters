@@ -5,6 +5,8 @@ We may be required to use a new database at any point.
 import os
 
 import pymongo as pm
+from functools import wraps
+from typing import Callable, TypeVar, Any
 
 LOCAL = "0"
 CLOUD = "1"
@@ -14,6 +16,23 @@ SE_DB = 'seDB'
 client = None
 
 MONGO_ID = '_id'
+
+
+F = TypeVar('F', bound=Callable[..., Any])
+
+
+def require_connection(func: F) -> F:
+    """
+    Decorator to ensure a Mongo client connection exists before DB operations.
+    Calls connect_db() lazily when needed and preserves the wrapped signature.
+    """
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        global client
+        if client is None:
+            connect_db()
+        return func(*args, **kwargs)
+    return wrapper  # type: ignore[return-value]
 
 
 def connect_db():
@@ -56,6 +75,7 @@ def create(collection, doc, db=SE_DB):
     return client[db][collection].insert_one(doc)
 
 
+@require_connection
 def read_one(collection, filt, db=SE_DB):
     """
     Find with a filter and return on the first doc found.
@@ -66,42 +86,26 @@ def read_one(collection, filt, db=SE_DB):
         return doc
 
 
+@require_connection
 def delete(collection: str, filt: dict, db=SE_DB):
-    if client is None:
-        try:
-            connect_db()
-        except Exception as e:
-            print(f"Client is not connected: {e}")
-            return None 
     """
-    Find with a filter and return on the first doc found.
+    Delete one document matching the filter. Returns deleted count.
     """
     print(f'{filt=}')
     del_result = client[db][collection].delete_one(filt)
     return del_result.deleted_count
 
 
+@require_connection
 def update(collection, filters, update_dict, db=SE_DB):
-    if client is None:
-        try:
-            connect_db()
-        except Exception as e:
-            print(f"Client is not connected: {e}")
-            return None 
-    
     return client[db][collection].update_one(filters, {'$set': update_dict})
 
 
+@require_connection
 def read(collection, db=SE_DB, no_id=True) -> list:
     """
     Returns a list from the db.
     """
-    if client is None:
-        try:
-            connect_db()
-        except Exception as e:
-            print(f"Client is not connected: {e}")
-            return None
     ret = []
     for doc in client[db][collection].find():
         if no_id:
@@ -112,6 +116,7 @@ def read(collection, db=SE_DB, no_id=True) -> list:
     return ret
 
 
+@require_connection
 def read_dict(collection, key, db=SE_DB, no_id=True) -> dict:
     recs = read(collection, db=db, no_id=no_id)
     recs_as_dict = {}
@@ -120,13 +125,8 @@ def read_dict(collection, key, db=SE_DB, no_id=True) -> dict:
     return recs_as_dict
 
 
+@require_connection
 def fetch_all_as_dict(key, collection, db=SE_DB):
-    if client is None:
-        try:
-            connect_db()
-        except Exception as e:
-            print(f"Client is not connected: {e}")
-            return None
     ret = {}
     for doc in client[db][collection].find():
         del doc[MONGO_ID]
