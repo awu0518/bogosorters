@@ -5,6 +5,10 @@ from unittest.mock import patch
 import pytest
 
 import cities.queries as cq
+from copy import deepcopy
+
+def get_temp_rec():
+    return deepcopy(cq.SAMPLE_CITY)
 
 @pytest.fixture(scope='function')
 def mock_randint():
@@ -121,3 +125,15 @@ def test_update_city_raises_on_bad_type(temp_city):
     """Test update raises error for invalid input type"""
     with pytest.raises(ValueError, match="Bad type"):
         cq.update(temp_city, ["not", "a", "dict"])
+
+def test_num_cities():
+    # get the count
+    old_count = cq.num_cities()
+    # add a record
+    cq.create(get_temp_rec())
+    assert cq.num_cities() == old_count + 1
+
+def test_read(temp_city):
+    cities = cq.read()
+    assert isinstance(cities, list)
+    assert get_temp_rec() in cities

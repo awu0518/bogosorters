@@ -13,6 +13,11 @@ STATE_CODE = 'state_code'
 
 city_cache = { }
 
+SAMPLE_CITY = {
+    NAME: 'New York',
+    STATE_CODE: 'NY',
+}
+
 # db connection placeholder
 def db_connect(success_ratio: int) -> bool:
     """
