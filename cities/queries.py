@@ -2,8 +2,10 @@
 This file deals with our city-level data.
 """
 from random import randint
+import data.db_connect as dbc
 
 MIN_ID_LEN = 1
+CITY_COLLECTION = 'cities'
 
 ID = 'id'
 NAME = 'name'
@@ -31,18 +33,17 @@ def is_valid_id(_id: str) -> bool:
     return True
 
 def num_cities() -> int:
-    return len(city_cache)
+    return len(read())
 
 def read() -> dict:
-    return city_cache
+    return dbc.read(CITY_COLLECTION)
 
 def create(flds: dict) -> str:
     if not isinstance(flds, dict):
         raise ValueError(f'Bad type for {type(flds)=}')
     if not flds.get(NAME):
         raise ValueError(f'Bad value for {flds.get(NAME)=}')
-    new_id = str(len(city_cache) + 1)
-    city_cache[new_id] = flds
+    new_id = dbc.create(CITY_COLLECTION, flds)
     return new_id
 
 def delete(city_id: str) -> bool:
@@ -50,6 +51,7 @@ def delete(city_id: str) -> bool:
         raise ValueError(f'No such city: {city_id}')
     del city_cache[city_id]
     return True
+
 def read_one(city_id: str) -> dict:
     """
     Retrieve a single city by ID.
