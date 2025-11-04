@@ -2,6 +2,7 @@
 This file deals with our country-level data.
 """
 from random import randint
+from typing import Optional
 
 MIN_ID_LEN = 1
 
@@ -43,6 +44,20 @@ def read_one(country_id: str) -> dict:
         raise ValueError(f'No such country: {country_id}')
     # return a copy for safety
     return dict(country_cache[country_id])
+
+def find_by_iso_code(iso_code: str) -> Optional[dict]:
+    """
+    Find a country by its ISO code (case-insensitive).
+    Returns a copy of the country data if found, otherwise None.
+    """
+    if not isinstance(iso_code, str) or not iso_code:
+        return None
+    target = iso_code.strip().lower()
+    for rec in country_cache.values():
+        code = rec.get(ISO_CODE)
+        if isinstance(code, str) and code.lower() == target:
+            return dict(rec)
+    return None
 
 def create(flds: dict) -> str:
     if not isinstance(flds, dict):

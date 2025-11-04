@@ -27,6 +27,8 @@ RANDOM_EP = '/random'
 RANDOM_RESP = 'random_number'
 DICE_EP = '/dice'
 DICE_RESP = 'rolls'
+HEALTH_EP = '/health'
+HEALTH_RESP = 'status'
 
 
 @api.route(HELLO_EP)
@@ -105,6 +107,23 @@ class DiceRoller(Resource):
             'total': sum(rolls),
             'num_dice': num_dice,
             'sides': sides
+        }
+
+
+@api.route(HEALTH_EP)
+class Health(Resource):
+    """
+    Basic health check endpoint.
+    """
+    def get(self):
+        """
+        Returns a simple OK with a timestamp so clients can verify liveness.
+        """
+        now = datetime.now()
+        return {
+            HEALTH_RESP: 'ok',
+            'timestamp': now.isoformat(),
+            'unix': now.timestamp()
         }
 
 
