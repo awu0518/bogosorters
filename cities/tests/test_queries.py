@@ -11,6 +11,12 @@ def get_temp_rec():
     return deepcopy(cq.SAMPLE_CITY)
 
 @pytest.fixture(scope='function')
+def temp_city_no_del():
+    temp_rec = get_temp_rec()
+    cq.create(get_temp_rec())
+    return temp_rec
+
+@pytest.fixture(scope='function')
 def mock_randint():
     """Fixture to mock randint for predictable testing"""
     with patch('cities.queries.randint') as mock_rand:
