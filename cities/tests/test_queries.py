@@ -99,3 +99,25 @@ def test_read_one_returns_copy(temp_city):
     city[cq.NAME] = "Modified Name"
     # Original should be unchanged
     assert cq.read_one(temp_city)[cq.NAME] == "Boston"
+
+def test_update_city_success(temp_city):
+    """Test update function with valid input"""
+    # Update the city's name
+    new_data = {cq.NAME: "New Boston"}
+    assert cq.update(temp_city, new_data) is True
+    updated_city = cq.read()[temp_city]
+    assert updated_city[cq.NAME] == "New Boston"
+    # STATE_CODE should remain unchanged
+    assert updated_city[cq.STATE_CODE] == "MA"
+
+
+def test_update_city_raises_on_missing(clear_city_cache):
+    """Test update raises error for non-existent city"""
+    with pytest.raises(ValueError, match="No such city"):
+        cq.update("999", {cq.NAME: "Ghost City"})
+
+
+def test_update_city_raises_on_bad_type(temp_city):
+    """Test update raises error for invalid input type"""
+    with pytest.raises(ValueError, match="Bad type"):
+        cq.update(temp_city, ["not", "a", "dict"])

@@ -59,3 +59,15 @@ def read_one(city_id: str) -> dict:
         raise ValueError(f'No such city: {city_id}')
     # return a copy for safety
     return dict(city_cache[city_id])
+
+def update(city_id: str, flds: dict) -> bool:
+    """
+    Update an existing city with new field values.
+    Returns True on success.
+    """
+    if not isinstance(flds, dict):
+        raise ValueError(f'Bad type for {type(flds)=}')
+    if city_id not in city_cache:
+        raise ValueError(f'No such city: {city_id}')
+    city_cache[city_id].update(flds)
+    return True
