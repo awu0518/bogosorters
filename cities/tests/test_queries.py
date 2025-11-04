@@ -38,6 +38,13 @@ def clear_city_cache():
     yield
     cq.city_cache.clear()
 
+@pytest.fixture(scope='function')
+def temp_city(clear_city_cache):
+    """Create a temporary city and yield its id"""
+    flds = {cq.NAME: "Boston", cq.STATE_CODE: "MA"}
+    cid = cq.create(flds)
+    return cid
+
 def test_create_success(clear_city_cache):
     """Test create function with valid input"""
     flds = {cq.NAME: "New York", cq.STATE_CODE: "NY"}
@@ -72,3 +79,23 @@ def test_read(temp_city):
     cities = cq.read()
     assert isinstance(cities, dict)
     assert temp_city in cities
+
+def test_read_one_success(temp_city):
+    """Test read_one function with valid city ID"""
+    city = cq.read_one(temp_city)
+    assert city[cq.NAME] == "Boston"
+    assert city[cq.STATE_CODE] == "MA"
+
+
+def test_read_one_raises_on_missing(clear_city_cache):
+    """Test read_one raises error for non-existent city"""
+    with pytest.raises(ValueError, match="No such city"):
+        cq.read_one("999")
+
+
+def test_read_one_returns_copy(temp_city):
+    """Verify that modifying the returned dict doesn't affect the cache"""
+    city = cq.read_one(temp_city)
+    city[cq.NAME] = "Modified Name"
+    # Original should be unchanged
+    assert cq.read_one(temp_city)[cq.NAME] == "Boston"

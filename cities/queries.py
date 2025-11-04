@@ -50,3 +50,12 @@ def delete(city_id: str) -> bool:
         raise ValueError(f'No such city: {city_id}')
     del city_cache[city_id]
     return True
+def read_one(city_id: str) -> dict:
+    """
+    Retrieve a single city by ID.
+    Returns a copy of the city data.
+    """
+    if city_id not in city_cache:
+        raise ValueError(f'No such city: {city_id}')
+    # return a copy for safety
+    return dict(city_cache[city_id])
