@@ -3,8 +3,9 @@ All interaction with MongoDB should be through this file!
 We may be required to use a new database at any point.
 """
 import os
-
 import pymongo as pm
+import time
+from pymongo.errors import ServerSelectionTimeoutError, PyMongoError
 from functools import wraps
 from typing import Callable, TypeVar, Any
 
@@ -35,6 +36,32 @@ def require_connection(func: F) -> F:
     return wrapper  # type: ignore[return-value]
 
 
+def _build_mongo_uri() -> str | None:
+    """
+    Build a MongoDB connection URI from environment variables if provided.
+    Priority:
+      1) MONGO_URI
+      2) CLOUD_MONGO == CLOUD -> construct from password (legacy behavior)
+      3) None (let MongoClient use defaults, typically localhost)
+    """
+    # Highest priority: explicit URI
+    explicit_uri = os.environ.get('MONGO_URI')
+    if explicit_uri:
+        return explicit_uri
+
+    # Legacy cloud toggle behavior
+    if os.environ.get('CLOUD_MONGO', LOCAL) == CLOUD:
+        password = os.environ.get('MONGO_PASSWD')
+        if not password:
+            raise ValueError('You must set MONGO_PASSWD to use Mongo in the cloud.')
+        return (f'mongodb+srv://gcallah:{password}'
+                + '@koukoumongo1.yud9b.mongodb.net/'
+                + '?retryWrites=true&w=majority')
+
+    # Fallback to None -> default local connection
+    return None
+
+
 def connect_db():
     """
     This provides a uniform way to connect to the DB across all uses.
@@ -46,18 +73,35 @@ def connect_db():
     global client
     if client is None:  # not connected yet!
         print('Setting client because it is None.')
-        if os.environ.get('CLOUD_MONGO', LOCAL) == CLOUD:
-            password = os.environ.get('MONGO_PASSWD')
-            if not password:
-                raise ValueError('You must set your password '
-                                 + 'to use Mongo in the cloud.')
-            print('Connecting to Mongo in the cloud.')
-            client = pm.MongoClient(f'mongodb+srv://gcallah:{password}'
-                                    + '@koukoumongo1.yud9b.mongodb.net/'
-                                    + '?retryWrites=true&w=majority')
+        max_retries = int(os.environ.get('MONGO_MAX_RETRIES', '3'))
+        backoff_ms = int(os.environ.get('MONGO_RETRY_MS', '200'))
+        timeout_ms = int(os.environ.get('MONGO_TIMEOUT_MS', '2000'))
+
+        uri = _build_mongo_uri()
+        last_error: Exception | None = None
+
+        for attempt in range(1, max_retries + 1):
+            try:
+                if uri:
+                    print(f'Connecting to Mongo via URI (attempt {attempt}/{max_retries}).')
+                    client = pm.MongoClient(uri, serverSelectionTimeoutMS=timeout_ms)
+                else:
+                    print(f'Connecting to Mongo locally (attempt {attempt}/{max_retries}).')
+                    client = pm.MongoClient(serverSelectionTimeoutMS=timeout_ms)
+
+                # Verify connectivity with a fast ping
+                client.admin.command('ping')
+                print('Mongo connection established and verified.')
+                break
+            except (ServerSelectionTimeoutError, PyMongoError) as err:
+                last_error = err
+                print(f'Mongo connection attempt {attempt} failed: {err}')
+                client = None
+                if attempt < max_retries:
+                    time.sleep(backoff_ms / 1000.0)
         else:
-            print("Connecting to Mongo locally.")
-            client = pm.MongoClient()
+            # All retries exhausted
+            raise RuntimeError(f'Failed to connect to Mongo after {max_retries} attempts.') from last_error
     return client
 
 
@@ -67,6 +111,35 @@ def convert_mongo_id(doc: dict):
         doc[MONGO_ID] = str(doc[MONGO_ID])
 
 
+def get_client():
+    """
+    Ensure a connected client and return it.
+    """
+    global client
+    if client is None:
+        connect_db()
+    return client
+
+
+def ping() -> dict:
+    """
+    Returns a diagnostic dict describing Mongo connectivity.
+    {
+      'ok': bool,
+      'round_trip_ms': float | None,
+      'error': str | None
+    }
+    """
+    start = time.time()
+    try:
+        get_client().admin.command('ping')
+        rtt_ms = (time.time() - start) * 1000.0
+        return {'ok': True, 'round_trip_ms': rtt_ms, 'error': None}
+    except Exception as err:  # noqa: BLE001
+        return {'ok': False, 'round_trip_ms': None, 'error': str(err)}
+
+
+@require_connection
 def create(collection, doc, db=SE_DB):
     """
     Insert a single doc into collection.

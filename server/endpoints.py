@@ -9,6 +9,7 @@ from flask_restx import Resource, Api  # , fields  # Namespace
 from flask_cors import CORS
 import random
 from datetime import datetime
+from data import db_connect as dbc
 
 # import werkzeug.exceptions as wz
 
@@ -117,13 +118,16 @@ class Health(Resource):
     """
     def get(self):
         """
-        Returns a simple OK with a timestamp so clients can verify liveness.
+        Returns server liveness and database health details.
         """
         now = datetime.now()
+        db_status = dbc.ping()
+        overall = 'ok' if db_status.get('ok') else 'degraded'
         return {
-            HEALTH_RESP: 'ok',
+            HEALTH_RESP: overall,
             'timestamp': now.isoformat(),
-            'unix': now.timestamp()
+            'unix': now.timestamp(),
+            'db': db_status
         }
 
 
