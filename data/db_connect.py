@@ -32,6 +32,13 @@ def require_connection(func: F) -> F:
         global client
         if client is None:
             connect_db()
+        else:
+            # Validate existing connection; reconnect if needed.
+            try:
+                client.admin.command('ping')
+            except (ServerSelectionTimeoutError, PyMongoError):
+                client = None
+                connect_db()
         return func(*args, **kwargs)
     return wrapper  # type: ignore[return-value]
 
