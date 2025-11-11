@@ -41,7 +41,7 @@ def num_cities() -> int:
     return len(read())
 
 def read() -> dict:
-    return dbc.read(CITY_COLLECTION)
+    return dbc.read_dict(CITY_COLLECTION, key=NAME)
 
 def create(flds: dict) -> str:
     if not isinstance(flds, dict):
@@ -49,7 +49,7 @@ def create(flds: dict) -> str:
     if not flds.get(NAME):
         raise ValueError(f'Bad value for {flds.get(NAME)=}')
     new_id = dbc.create(CITY_COLLECTION, flds)
-    return new_id
+    return str(new_id.inserted_id)
 
 def delete(name: str, state_code: str) -> bool:
     ret = dbc.delete(CITY_COLLECTION, {NAME: name, STATE_CODE: state_code})
