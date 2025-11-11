@@ -11,8 +11,6 @@ ID = 'id'
 NAME = 'name'
 STATE_CODE = 'state_code'
 
-city_cache = { }
-
 SAMPLE_CITY = {
     NAME: 'New York',
     STATE_CODE: 'NY',
@@ -62,10 +60,11 @@ def read_one(city_id: str) -> dict:
     Retrieve a single city by ID.
     Returns a copy of the city data.
     """
-    if city_id not in city_cache:
+    cities = read()
+    if city_id not in cities:
         raise ValueError(f'No such city: {city_id}')
     # return a copy for safety
-    return dict(city_cache[city_id])
+    return dict(cities[city_id])
 
 def update(city_id: str, flds: dict) -> bool:
     """
@@ -74,7 +73,8 @@ def update(city_id: str, flds: dict) -> bool:
     """
     if not isinstance(flds, dict):
         raise ValueError(f'Bad type for {type(flds)=}')
-    if city_id not in city_cache:
+    cities = read()
+    if city_id not in cities:
         raise ValueError(f'No such city: {city_id}')
-    city_cache[city_id].update(flds)
+    dbc.update(CITY_COLLECTION, {NAME: city_id}, flds)
     return True
