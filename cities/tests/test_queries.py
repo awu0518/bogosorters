@@ -143,3 +143,10 @@ def test_read(temp_city):
     cities = cq.read()
     assert isinstance(cities, list)
     assert get_temp_rec() in cities
+
+@pytest.mark.skip('revive once all functions are cutover!')
+def test_read_cant_connect():
+    with pytest.raises(ConnectionError):
+        cities = cq.read()
+    assert isinstance(cities, list)
+    assert get_temp_rec() in cities
