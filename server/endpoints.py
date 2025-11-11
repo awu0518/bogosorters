@@ -4,12 +4,14 @@ The endpoint called `endpoints` will return all available endpoints.
 """
 # from http import HTTPStatus
 
-from flask import Flask  # , request
-from flask_restx import Resource, Api  # , fields  # Namespace
+from flask import Flask, request
+from flask_restx import Resource, Api
 from flask_cors import CORS
 import random
 from datetime import datetime
 from data import db_connect as dbc
+import cities.queries as cq
+import countries.queries as ctq
 
 # import werkzeug.exceptions as wz
 
@@ -30,6 +32,10 @@ DICE_EP = '/dice'
 DICE_RESP = 'rolls'
 HEALTH_EP = '/health'
 HEALTH_RESP = 'status'
+CITIES_EP = '/cities'
+CITIES_RESP = 'cities'
+COUNTRIES_EP = '/countries'
+COUNTRIES_RESP = 'countries'
 
 
 @api.route(HELLO_EP)
@@ -129,6 +135,154 @@ class Health(Resource):
             'unix': now.timestamp(),
             'db': db_status
         }
+
+
+@api.route(CITIES_EP)
+class Cities(Resource):
+    """
+    This class handles operations on cities collection.
+    """
+    def get(self):
+        """
+        Returns all cities from the database.
+        """
+        try:
+            cities = cq.read()
+            return {
+                CITIES_RESP: cities,
+                'count': len(cities)
+            }
+        except Exception as e:
+            return {'error': str(e)}, 500
+
+    def post(self):
+        """
+        Create a new city.
+        Expected JSON body: {"name": "City Name", "state_code": "ST"}
+        """
+        try:
+            data = request.json
+            new_id = cq.create(data)
+            return {
+                MESSAGE: 'City created successfully',
+                'id': str(new_id)
+            }, 201
+        except ValueError as e:
+            return {'error': str(e)}, 400
+        except Exception as e:
+            return {'error': str(e)}, 500
+
+
+@api.route(f'{CITIES_EP}/<city_name>')
+class CityByName(Resource):
+    """
+    This class handles operations on a specific city.
+    """
+    def delete(self, city_name):
+        """
+        Delete a city by name.
+        Requires state_code as query parameter.
+        """
+        try:
+            state_code = request.args.get('state_code')
+            if not state_code:
+                return {'error': 'state_code query parameter is required'}, 400
+            cq.delete(city_name, state_code)
+            return {MESSAGE: f'City {city_name} deleted successfully'}
+        except ValueError as e:
+            return {'error': str(e)}, 404
+        except Exception as e:
+            return {'error': str(e)}, 500
+
+
+@api.route(COUNTRIES_EP)
+class Countries(Resource):
+    """
+    This class handles operations on countries collection.
+    """
+    def get(self):
+        """
+        Returns all countries from the database.
+        Optional query parameter: iso_code (to filter by ISO code)
+        """
+        try:
+            iso_code = request.args.get('iso_code')
+            if iso_code:
+                country = ctq.find_by_iso_code(iso_code)
+                if country:
+                    return {COUNTRIES_RESP: country}
+                else:
+                    error_msg = f'Country with ISO code {iso_code} not found'
+                    return {'error': error_msg}, 404
+
+            countries = ctq.read()
+            return {
+                COUNTRIES_RESP: countries,
+                'count': len(countries)
+            }
+        except Exception as e:
+            return {'error': str(e)}, 500
+
+    def post(self):
+        """
+        Create a new country.
+        Expected JSON body: {"name": "Country Name", "iso_code": "CC"}
+        """
+        try:
+            data = request.json
+            new_id = ctq.create(data)
+            return {
+                MESSAGE: 'Country created successfully',
+                'id': str(new_id)
+            }, 201
+        except ValueError as e:
+            return {'error': str(e)}, 400
+        except Exception as e:
+            return {'error': str(e)}, 500
+
+
+@api.route(f'{COUNTRIES_EP}/<country_id>')
+class CountryById(Resource):
+    """
+    This class handles operations on a specific country.
+    """
+    def get(self, country_id):
+        """
+        Get a specific country by ID (name).
+        """
+        try:
+            country = ctq.read_one(country_id)
+            return {COUNTRIES_RESP: country}
+        except ValueError as e:
+            return {'error': str(e)}, 404
+        except Exception as e:
+            return {'error': str(e)}, 500
+
+    def put(self, country_id):
+        """
+        Update a country by ID.
+        Expected JSON body: fields to update
+        """
+        try:
+            data = request.json
+            ctq.update(country_id, data)
+            return {MESSAGE: f'Country {country_id} updated successfully'}
+        except ValueError as e:
+            return {'error': str(e)}, 404
+        except Exception as e:
+            return {'error': str(e)}, 500
+
+    def delete(self, country_id):
+        """
+        Delete a country by ID.
+        """
+        try:
+            ctq.delete(country_id)
+            return {MESSAGE: f'Country {country_id} deleted successfully'}
+        except ValueError as e:
+            return {'error': str(e)}, 404
+        except Exception as e:
+            return {'error': str(e)}, 500
 
 
 if __name__ == '__main__':
