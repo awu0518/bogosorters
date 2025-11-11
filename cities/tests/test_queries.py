@@ -81,8 +81,8 @@ def test_create_multiple_cities(clear_city_cache):
 
 @patch('cities.queries.db_connect', return_value=True, autospec=True)
 def test_delete(mock_db_connect, temp_city):
-    cq.delete(temp_city)
-    assert temp_city not in cq.read()
+    ret = cq.delete(temp_city_no_del[cq.NAME], temp_city_no_del[cq.STATE_CODE])
+    assert ret == 1
 
 @pytest.mark.skip('revive once all functions are cutover!')
 def test_read(temp_city):
