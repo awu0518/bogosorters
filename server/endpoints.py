@@ -34,6 +34,7 @@ HEALTH_EP = '/health'
 HEALTH_RESP = 'status'
 CITIES_EP = '/cities'
 CITIES_RESP = 'cities'
+CITIES_SEARCH_EP = '/cities/search'
 COUNTRIES_EP = '/countries'
 COUNTRIES_RESP = 'countries'
 
@@ -191,6 +192,33 @@ class CityByName(Resource):
             return {MESSAGE: f'City {city_name} deleted successfully'}
         except ValueError as e:
             return {'error': str(e)}, 404
+        except Exception as e:
+            return {'error': str(e)}, 500
+
+
+@api.route(CITIES_SEARCH_EP)
+class CitiesSearch(Resource):
+    """
+    Search cities by name and/or state code.
+    """
+    def get(self):
+        """
+        Search cities with optional filters.
+        Query params: name (substring), state_code (exact)
+        """
+        try:
+            name = request.args.get('name')
+            state_code = request.args.get('state_code')
+            if not name and not state_code:
+                return {
+                    'error': 'Provide at least one parameter: '
+                             'name or state_code'
+                }, 400
+            results = cq.search(name=name, state_code=state_code)
+            return {
+                CITIES_RESP: results,
+                'count': len(results)
+            }
         except Exception as e:
             return {'error': str(e)}, 500
 

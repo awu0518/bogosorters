@@ -78,3 +78,31 @@ def update(city_id: str, flds: dict) -> bool:
         raise ValueError(f'No such city: {city_id}')
     dbc.update(CITY_COLLECTION, {NAME: city_id}, flds)
     return True
+
+def search(name: str = None, state_code: str = None) -> dict:
+    """
+    Search cities by name and/or state_code (case-insensitive).
+    
+    Args:
+        name: City name substring to search for
+        state_code: State code to filter by
+    
+    Returns:
+        Dictionary of matching cities
+    """
+    cities = read()
+    results = {}
+    
+    for city_name, city_data in cities.items():
+        match = True
+        
+        if name and name.lower() not in city_data.get(NAME, '').lower():
+            match = False
+        
+        if state_code and city_data.get(STATE_CODE, '').lower() != state_code.lower():
+            match = False
+        
+        if match:
+            results[city_name] = city_data
+    
+    return results
