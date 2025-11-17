@@ -94,3 +94,31 @@ def update(country_id: str, flds: dict) -> bool:
         raise ValueError(f'No such country: {country_id}')
     dbc.update(COUNTRY_COLLECTION, {NAME: country_id}, flds)
     return True
+
+def search(name: str = None, iso_code: str = None) -> dict:
+    """
+    Search countries by name and/or ISO code (case-insensitive).
+    
+    Args:
+        name: Country name substring to search for
+        iso_code: ISO code to filter by
+    
+    Returns:
+        Dictionary of matching countries
+    """
+    countries = read()
+    results = {}
+    
+    for country_name, country_data in countries.items():
+        match = True
+        
+        if name and name.lower() not in country_data.get(NAME, '').lower():
+            match = False
+        
+        if iso_code and country_data.get(ISO_CODE, '').lower() != iso_code.lower():
+            match = False
+        
+        if match:
+            results[country_name] = country_data
+    
+    return results

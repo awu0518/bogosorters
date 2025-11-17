@@ -37,6 +37,7 @@ CITIES_RESP = 'cities'
 CITIES_SEARCH_EP = '/cities/search'
 COUNTRIES_EP = '/countries'
 COUNTRIES_RESP = 'countries'
+COUNTRIES_SEARCH_EP = '/countries/search'
 
 
 @api.route(HELLO_EP)
@@ -309,6 +310,31 @@ class CountryById(Resource):
             return {MESSAGE: f'Country {country_id} deleted successfully'}
         except ValueError as e:
             return {'error': str(e)}, 404
+        except Exception as e:
+            return {'error': str(e)}, 500
+
+
+@api.route(COUNTRIES_SEARCH_EP)
+class CountriesSearch(Resource):
+    """
+    Search countries by name and/or ISO code.
+    """
+    def get(self):
+        """
+        Search countries with optional filters.
+        Query params: name (substring), iso_code (exact)
+        """
+        try:
+            name = request.args.get('name')
+            iso_code = request.args.get('iso_code')
+            if not name and not iso_code:
+                err = 'Provide at least one parameter: name or iso_code'
+                return {'error': err}, 400
+            results = ctq.search(name=name, iso_code=iso_code)
+            return {
+                COUNTRIES_RESP: results,
+                'count': len(results)
+            }
         except Exception as e:
             return {'error': str(e)}, 500
 
