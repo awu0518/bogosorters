@@ -61,9 +61,13 @@ def test_create_success(clear_city_cache):
     
     result = cq.create(flds)
     
-    assert result == "1"  # First city should get ID "1"
-    assert cq.city_cache["1"] == flds
-    assert cq.num_cities() == 1
+    # Should return a valid ID
+    assert result is not None
+    # Cache should not contain the city after create (create only invalidates)
+    assert "New York" not in cq.city_cache
+    # But the city should exist in the database
+    cities = cq.read()
+    assert "New York" in cities
 
 def test_create_multiple_cities(clear_city_cache):
     """Test creating multiple cities"""
@@ -91,10 +95,19 @@ def test_read(temp_city):
     assert temp_city in cities
 
 def test_read_one_success(temp_city):
-    """Test read_one function with valid city ID"""
+    """Test read_one function with valid city ID and caching"""
+    # First call should fetch from database and cache it
     city = cq.read_one(temp_city)
     assert city[cq.NAME] == "Boston"
     assert city[cq.STATE_CODE] == "MA"
+    
+    # Verify city is now in cache
+    assert temp_city in cq.city_cache
+    
+    # Second call should use cache
+    city2 = cq.read_one(temp_city)
+    assert city2[cq.NAME] == "Boston"
+    assert city2[cq.STATE_CODE] == "MA"
 
 
 def test_read_one_raises_on_missing(clear_city_cache):
