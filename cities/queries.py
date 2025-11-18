@@ -2,6 +2,7 @@
 This file deals with our city-level data.
 """
 from random import randint
+import time
 import data.db_connect as dbc
 
 MIN_ID_LEN = 1
@@ -10,6 +11,11 @@ CITY_COLLECTION = 'cities'
 ID = 'id'
 NAME = 'name'
 STATE_CODE = 'state_code'
+
+# Cache configuration
+CACHE_MAX_SIZE = 100  # Maximum number of cities to cache
+CACHE_EXPIRY_SECONDS = 300  # 5 minutes
+city_cache = {}  # {city_name: {'data': city_data, 'timestamp': time}}
 
 SAMPLE_CITY = {
     NAME: 'New York',
@@ -35,6 +41,35 @@ def is_valid_id(_id: str) -> bool:
         return False
     return True
 
+def _is_cache_entry_valid(city_name: str) -> bool:
+    """Check if a specific cache entry is still valid."""
+    if city_name not in city_cache:
+        return False
+    current_time = time.time()
+    return current_time - city_cache[city_name]['timestamp'] < CACHE_EXPIRY_SECONDS
+
+def _evict_oldest_cache_entry():
+    """Remove the oldest cache entry when cache is full."""
+    if not city_cache:
+        return
+    oldest_key = min(city_cache.keys(), key=lambda k: city_cache[k]['timestamp'])
+    del city_cache[oldest_key]
+
+def _cache_city(city_name: str, city_data: dict):
+    """Add a city to cache, evicting old entries if necessary."""
+    if len(city_cache) >= CACHE_MAX_SIZE:
+        _evict_oldest_cache_entry()
+    
+    city_cache[city_name] = {
+        'data': dict(city_data),  # Store a copy
+        'timestamp': time.time()
+    }
+
+def _invalidate_cache_entry(city_name: str):
+    """Remove a specific city from cache."""
+    if city_name in city_cache:
+        del city_cache[city_name]
+
 def num_cities() -> int:
     return len(read())
 
@@ -47,24 +82,37 @@ def create(flds: dict) -> str:
     if not flds.get(NAME):
         raise ValueError(f'Bad value for {flds.get(NAME)=}')
     new_id = dbc.create(CITY_COLLECTION, flds)
+    # Invalidate cache entry if it exists (unlikely but possible)
+    city_name = flds.get(NAME)
+    if city_name:
+        _invalidate_cache_entry(city_name)
     return str(new_id.inserted_id)
 
 def delete(name: str, state_code: str) -> bool:
     ret = dbc.delete(CITY_COLLECTION, {NAME: name, STATE_CODE: state_code})
     if ret < 1:
         raise ValueError(f'City not found: {name}, {state_code}')
+    # Invalidate cache entry
+    _invalidate_cache_entry(name)
     return ret
 
 def read_one(city_id: str) -> dict:
     """
-    Retrieve a single city by ID.
+    Retrieve a single city by ID with cache-first lookup.
     Returns a copy of the city data.
     """
+    # Check cache first
+    if _is_cache_entry_valid(city_id):
+        return dict(city_cache[city_id]['data'])  # Return a copy
+    
+    # Cache miss - fetch from database
     cities = read()
     if city_id not in cities:
         raise ValueError(f'No such city: {city_id}')
-    # return a copy for safety
-    return dict(cities[city_id])
+    
+    city_data = cities[city_id]
+    _cache_city(city_id, city_data)
+    return dict(city_data)
 
 def update(city_id: str, flds: dict) -> bool:
     """
@@ -77,6 +125,8 @@ def update(city_id: str, flds: dict) -> bool:
     if city_id not in cities:
         raise ValueError(f'No such city: {city_id}')
     dbc.update(CITY_COLLECTION, {NAME: city_id}, flds)
+    # Invalidate cache entry since data has changed
+    _invalidate_cache_entry(city_id)
     return True
 
 def search(name: str = None, state_code: str = None) -> dict:
