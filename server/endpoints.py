@@ -150,11 +150,33 @@ class Cities(Resource):
         Returns all cities from the database.
         """
         try:
-            cities = cq.read()
-            return {
-                CITIES_RESP: cities,
-                'count': len(cities)
-            }
+            # Optional pagination
+            page = request.args.get('page')
+            limit = request.args.get('limit')
+            if page is not None or limit is not None:
+                sort_by = request.args.get('sort_by', cq.NAME)
+                order = request.args.get('order', 'asc')
+                page_val = int(page) if page is not None else 1
+                limit_val = int(limit) if limit is not None else 50
+                data = cq.read_paginated(page=page_val, limit=limit_val, sort_by=sort_by, order=order)
+                return {
+                    CITIES_RESP: data['items'],
+                    'count': len(data['items']),
+                    'pagination': {
+                        'page': data['page'],
+                        'limit': data['limit'],
+                        'total': data['total'],
+                        'pages': data['pages'],
+                        'has_next': data['has_next'],
+                        'has_prev': data['has_prev'],
+                    }
+                }
+            else:
+                cities = cq.read()
+                return {
+                    CITIES_RESP: cities,
+                    'count': len(cities)
+                }
         except Exception as e:
             return {'error': str(e)}, 500
 
@@ -244,12 +266,33 @@ class Countries(Resource):
                 else:
                     error_msg = f'Country with ISO code {iso_code} not found'
                     return {'error': error_msg}, 404
-
-            countries = ctq.read()
-            return {
-                COUNTRIES_RESP: countries,
-                'count': len(countries)
-            }
+            # Optional pagination
+            page = request.args.get('page')
+            limit = request.args.get('limit')
+            if page is not None or limit is not None:
+                sort_by = request.args.get('sort_by', ctq.NAME)
+                order = request.args.get('order', 'asc')
+                page_val = int(page) if page is not None else 1
+                limit_val = int(limit) if limit is not None else 50
+                data = ctq.read_paginated(page=page_val, limit=limit_val, sort_by=sort_by, order=order)
+                return {
+                    COUNTRIES_RESP: data['items'],
+                    'count': len(data['items']),
+                    'pagination': {
+                        'page': data['page'],
+                        'limit': data['limit'],
+                        'total': data['total'],
+                        'pages': data['pages'],
+                        'has_next': data['has_next'],
+                        'has_prev': data['has_prev'],
+                    }
+                }
+            else:
+                countries = ctq.read()
+                return {
+                    COUNTRIES_RESP: countries,
+                    'count': len(countries)
+                }
         except Exception as e:
             return {'error': str(e)}, 500
 

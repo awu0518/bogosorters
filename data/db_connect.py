@@ -222,6 +222,83 @@ def read(collection, db=SE_DB, no_id=True) -> list:
 
 
 @require_connection
+def find_paginated(
+    collection: str,
+    db: str = SE_DB,
+    filt: dict | None = None,
+    projection: dict | None = None,
+    sort: list[tuple[str, int]] | None = None,
+    page: int = 1,
+    limit: int = 50,
+    no_id: bool = True
+) -> dict:
+    """
+    Paginated find helper that returns items and pagination metadata.
+    Args:
+        collection: Mongo collection name.
+        db: Database name.
+        filt: Query filter dict.
+        projection: Fields projection.
+        sort: List of (field, direction) where direction is 1 (asc) or -1 (desc).
+        page: 1-based page number.
+        limit: Items per page.
+        no_id: When True, remove '_id' from each document.
+    Returns:
+        {
+          'items': [docs...],
+          'page': int,
+          'limit': int,
+          'total': int,
+          'pages': int,
+          'has_next': bool,
+          'has_prev': bool
+        }
+    """
+    # Sanitize paging params
+    try:
+        page = int(page)
+    except Exception:  # noqa: BLE001
+        page = 1
+    try:
+        limit = int(limit)
+    except Exception:  # noqa: BLE001
+        limit = 50
+    if page < 1:
+        page = 1
+    if limit < 1:
+        limit = 1
+
+    effective_filter = filt or {}
+    total = client[db][collection].count_documents(effective_filter)
+    pages = max(1, (total + limit - 1) // limit)
+    skip = (page - 1) * limit
+
+    cursor = client[db][collection].find(effective_filter, projection)
+    if sort:
+        cursor = cursor.sort(sort)
+    cursor = cursor.skip(skip).limit(limit)
+
+    items: list[dict] = []
+    for doc in cursor:
+        if no_id:
+            if MONGO_ID in doc:
+                del doc[MONGO_ID]
+        else:
+            convert_mongo_id(doc)
+        items.append(doc)
+
+    return {
+        'items': items,
+        'page': page,
+        'limit': limit,
+        'total': total,
+        'pages': pages,
+        'has_next': page < pages,
+        'has_prev': page > 1,
+    }
+
+
+@require_connection
 def read_dict(collection, key, db=SE_DB, no_id=True) -> dict:
     recs = read(collection, db=db, no_id=no_id)
     recs_as_dict = {}

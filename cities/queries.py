@@ -76,6 +76,20 @@ def num_cities() -> int:
 def read() -> dict:
     return dbc.read_dict(CITY_COLLECTION, key=NAME)
 
+def read_paginated(page: int = 1, limit: int = 50, sort_by: str = NAME, order: str = 'asc') -> dict:
+    """
+    Return paginated cities list with metadata.
+    """
+    direction = -1 if isinstance(order, str) and order.lower() == 'desc' else 1
+    return dbc.find_paginated(
+        collection=CITY_COLLECTION,
+        db=dbc.SE_DB,
+        sort=[(sort_by, direction)],
+        page=page,
+        limit=limit,
+        no_id=True
+    )
+
 def create(flds: dict) -> str:
     if not isinstance(flds, dict):
         raise ValueError(f'Bad type for {type(flds)=}')

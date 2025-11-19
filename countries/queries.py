@@ -40,6 +40,20 @@ def read() -> dict:
     """Read all countries from MongoDB as a dictionary."""
     return dbc.read_dict(COUNTRY_COLLECTION, key=NAME)
 
+def read_paginated(page: int = 1, limit: int = 50, sort_by: str = NAME, order: str = 'asc') -> dict:
+    """
+    Return paginated countries list with metadata.
+    """
+    direction = -1 if isinstance(order, str) and order.lower() == 'desc' else 1
+    return dbc.find_paginated(
+        collection=COUNTRY_COLLECTION,
+        db=dbc.SE_DB,
+        sort=[(sort_by, direction)],
+        page=page,
+        limit=limit,
+        no_id=True
+    )
+
 def read_one(country_id: str) -> dict:
     """
     Retrieve a single country by ID.
