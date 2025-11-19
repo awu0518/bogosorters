@@ -41,25 +41,7 @@ COUNTRIES_SEARCH_EP = '/countries/search'
 STATES_EPS = '/states'
 
 
-@api.route(STATES_EPS)
-class States(Resource):
-    """
-    The purpose of the HelloWorld class is to have a simple test to see if the
-    app is working at all.
-    """
-    def get(self):
-        """
-        A trivial endpoint to see if the server is running.
-        """
-        try:
-            states = cq.read()
-            num_recs = len(states)
-        except ConnectionError as e:
-            return {"Error": str(e)}
-        return {
-            "STATE_RESP": states,
-            "NUM_RECS": num_recs,
-        }
+
 
 @api.route(HELLO_EP)
 class HelloWorld(Resource):
