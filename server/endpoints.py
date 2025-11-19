@@ -41,7 +41,7 @@ COUNTRIES_SEARCH_EP = '/countries/search'
 STATES_EPS = '/states'
 
 
-@api.route(f'{STATES_EPS}')
+@api.route(STATES_EPS)
 class States(Resource):
     """
     The purpose of the HelloWorld class is to have a simple test to see if the

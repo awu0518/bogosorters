@@ -8,6 +8,7 @@ import time
 from pymongo.errors import ServerSelectionTimeoutError, PyMongoError
 from functools import wraps
 from typing import Callable, TypeVar, Any
+from bson import ObjectId
 
 LOCAL = "0"
 CLOUD = "1"
@@ -116,6 +117,30 @@ def convert_mongo_id(doc: dict):
     if MONGO_ID in doc:
         # Convert mongo ID to a string so it works as JSON
         doc[MONGO_ID] = str(doc[MONGO_ID])
+
+
+def deep_convert_object_ids(obj: Any) -> Any:
+    """
+    Recursively convert any BSON ObjectId values inside a dict/list structure
+    into their string representation so results are JSON-serializable.
+
+    Examples:
+        deep_convert_object_ids({'_id': ObjectId(...), 'nested': [{'x': ObjectId(...)}]})
+
+    This returns a new object and does not mutate the input.
+    """
+    if isinstance(obj, ObjectId):
+        return str(obj)
+
+    if isinstance(obj, dict):
+        return {k: deep_convert_object_ids(v) for k, v in obj.items()}
+
+    if isinstance(obj, list):
+        return [deep_convert_object_ids(v) for v in obj]
+    if isinstance(obj, tuple):
+        return tuple(deep_convert_object_ids(v) for v in obj)
+
+    return obj
 
 
 def get_client():
