@@ -187,7 +187,12 @@ class Cities(Resource):
                 order = request.args.get('order', 'asc')
                 page_val = int(page) if page is not None else 1
                 limit_val = int(limit) if limit is not None else 50
-                data = cq.read_paginated(page=page_val, limit=limit_val, sort_by=sort_by, order=order)
+                data = cq.read_paginated(
+                    page=page_val,
+                    limit=limit_val,
+                    sort_by=sort_by,
+                    order=order
+                )
                 return {
                     CITIES_RESP: data['items'],
                     'count': len(data['items']),
@@ -303,7 +308,12 @@ class Countries(Resource):
                 order = request.args.get('order', 'asc')
                 page_val = int(page) if page is not None else 1
                 limit_val = int(limit) if limit is not None else 50
-                data = ctq.read_paginated(page=page_val, limit=limit_val, sort_by=sort_by, order=order)
+                data = ctq.read_paginated(
+                    page=page_val,
+                    limit=limit_val,
+                    sort_by=sort_by,
+                    order=order
+                )
                 return {
                     COUNTRIES_RESP: data['items'],
                     'count': len(data['items']),
