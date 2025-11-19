@@ -118,6 +118,35 @@ class DiceRoller(Resource):
             'num_dice': num_dice,
             'sides': sides
         }
+    
+    def post(self):
+        """
+        Simulates rolling custom dice specified in JSON body.
+        JSON: {"num_dice": int, "sides": int}
+        Defaults: num_dice=2, sides=6
+        Constraints: 1 <= num_dice <= 100, 2 <= sides <= 1000
+        """
+        data = request.get_json(silent=True) or {}
+        num_dice = data.get('num_dice', 2)
+        sides = data.get('sides', 6)
+        try:
+            num_dice = int(num_dice)
+            sides = int(sides)
+        except Exception as e:  # noqa: BLE001
+            return {'error': f'invalid parameters: {e}'}, 400
+        
+        if not (1 <= num_dice <= 100):
+            return {'error': 'num_dice must be between 1 and 100'}, 400
+        if not (2 <= sides <= 1000):
+            return {'error': 'sides must be between 2 and 1000'}, 400
+        
+        rolls = [random.randint(1, sides) for _ in range(num_dice)]
+        return {
+            DICE_RESP: rolls,
+            'total': sum(rolls),
+            'num_dice': num_dice,
+            'sides': sides
+        }
 
 
 @api.route(HEALTH_EP)
