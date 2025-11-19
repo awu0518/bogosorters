@@ -39,7 +39,7 @@ COUNTRIES_EP = '/countries'
 COUNTRIES_RESP = 'countries'
 COUNTRIES_SEARCH_EP = '/countries/search'
 STATES_EPS = '/states'
- 
+
 
 @api.route(HELLO_EP)
 class HelloWorld(Resource):
