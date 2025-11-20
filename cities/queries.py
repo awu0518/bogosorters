@@ -4,6 +4,7 @@ This file deals with our city-level data.
 from random import randint
 import time
 import data.db_connect as dbc
+import validation
 
 MIN_ID_LEN = 1
 CITY_COLLECTION = 'cities'
@@ -114,10 +115,13 @@ def read_paginated(page: int = 1,
 
 
 def create(flds: dict) -> str:
-    if not isinstance(flds, dict):
-        raise ValueError(f'Bad type for {type(flds)=}')
-    if not flds.get(NAME):
-        raise ValueError(f'Bad value for {flds.get(NAME)=}')
+    # Validate input
+    validation.validate_required_fields(flds, [NAME, STATE_CODE])
+    validation.validate_string_length(flds[NAME], 'name', max_length=100)
+    validation.validate_string_length(
+        flds[STATE_CODE], 'state_code', max_length=2
+    )
+
     new_id = dbc.create(CITY_COLLECTION, flds)
     # Invalidate cache entry if it exists (unlikely but possible)
     city_name = flds.get(NAME)

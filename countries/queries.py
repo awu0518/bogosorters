@@ -4,6 +4,7 @@ This file deals with our country-level data.
 from random import randint
 from typing import Optional
 import data.db_connect as dbc
+import validation
 
 MIN_ID_LEN = 1
 COUNTRY_COLLECTION = 'countries'
@@ -80,10 +81,11 @@ def find_by_iso_code(iso_code: str) -> Optional[dict]:
     return None
 
 def create(flds: dict) -> str:
-    if not isinstance(flds, dict):
-        raise ValueError(f'Bad type for {type(flds)=}')
-    if not flds.get(NAME):
-        raise ValueError(f'Bad value for {flds.get(NAME)=}')
+    # Validate input
+    validation.validate_required_fields(flds, [NAME, ISO_CODE])
+    validation.validate_string_length(flds[NAME], 'name', max_length=100)
+    validation.validate_string_length(flds[ISO_CODE], 'iso_code', max_length=3)
+
     new_id = dbc.create(COUNTRY_COLLECTION, flds)
     return str(new_id.inserted_id)
 
