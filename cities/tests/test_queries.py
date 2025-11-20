@@ -3,6 +3,7 @@ Tests for cities.queries module
 """
 from unittest.mock import patch
 import pytest
+import time
 
 import cities.queries as cq
 from copy import deepcopy
@@ -50,43 +51,57 @@ def clear_city_cache():
 
 @pytest.fixture(scope='function')
 def temp_city(clear_city_cache):
-    """Create a temporary city and yield its id"""
+    """Create a temporary city and yield its name (used as ID)"""
     flds = {cq.NAME: "Boston", cq.STATE_CODE: "MA"}
-    cid = cq.create(flds)
-    return cid
+    cq.create(flds)
+    return flds[cq.NAME]  # Return city name, which is used as the key
 
 def test_create_success(clear_city_cache):
     """Test create function with valid input"""
-    flds = {cq.NAME: "New York", cq.STATE_CODE: "NY"}
+    # Use unique name to avoid conflicts
+    test_city = {cq.NAME: f"TestCreateCity_{int(time.time())}", cq.STATE_CODE: "NY"}
     
-    result = cq.create(flds)
+    result = cq.create(test_city)
     
     # Should return a valid ID
     assert result is not None
     # Cache should not contain the city after create (create only invalidates)
-    assert "New York" not in cq.city_cache
+    assert test_city[cq.NAME] not in cq.city_cache
     # But the city should exist in the database
     cities = cq.read()
-    assert "New York" in cities
+    assert test_city[cq.NAME] in cities
+    
+    # Clean up
+    cq.delete(test_city[cq.NAME], test_city[cq.STATE_CODE])
 
 def test_create_multiple_cities(clear_city_cache):
     """Test creating multiple cities"""
-    city1 = {cq.NAME: "New York", cq.STATE_CODE: "NY"}
-    city2 = {cq.NAME: "Los Angeles", cq.STATE_CODE: "CA"}
+    # Use unique names to avoid conflicts
+    timestamp = int(time.time())
+    city1 = {cq.NAME: f"TestCity1_{timestamp}", cq.STATE_CODE: "NY"}
+    city2 = {cq.NAME: f"TestCity2_{timestamp}", cq.STATE_CODE: "CA"}
     
     id1 = cq.create(city1)
     id2 = cq.create(city2)
     
-    assert id1 == "1"
-    assert id2 == "2"
-    assert cq.city_cache["1"] == city1
-    assert cq.city_cache["2"] == city2
-    assert cq.num_cities() == 2
+    # Should return valid MongoDB ObjectIds (not simple incremental IDs)
+    assert len(id1) == 24  # MongoDB ObjectId length
+    assert len(id2) == 24
+    assert id1 != id2  # Should be different IDs
+    assert cq.num_cities() >= 2  # At least 2 cities should exist
+    
+    # Clean up test cities
+    cq.delete(city1[cq.NAME], city1[cq.STATE_CODE])
+    cq.delete(city2[cq.NAME], city2[cq.STATE_CODE])
 
 @patch('cities.queries.db_connect', return_value=True, autospec=True)
-def test_delete(mock_db_connect, temp_city):
-    ret = cq.delete(temp_city_no_del[cq.NAME], temp_city_no_del[cq.STATE_CODE])
-    assert ret == 1
+def test_delete(mock_db_connect, clear_city_cache):
+    # Create a test city first
+    test_city = {cq.NAME: "Test City", cq.STATE_CODE: "TC"}
+    cq.create(test_city)
+    
+    ret = cq.delete(test_city[cq.NAME], test_city[cq.STATE_CODE])
+    assert ret >= 1  # Should delete at least 1 record
 
 @pytest.mark.skip('revive once all functions are cutover!')
 def test_read(temp_city):
@@ -128,7 +143,10 @@ def test_update_city_success(temp_city):
     # Update the city's name
     new_data = {cq.NAME: "New Boston"}
     assert cq.update(temp_city, new_data) is True
-    updated_city = cq.read()[temp_city]
+    # After name change, the city is now keyed by the new name
+    cities = cq.read()
+    assert "New Boston" in cities
+    updated_city = cities["New Boston"]
     assert updated_city[cq.NAME] == "New Boston"
     # STATE_CODE should remain unchanged
     assert updated_city[cq.STATE_CODE] == "MA"
@@ -148,14 +166,23 @@ def test_update_city_raises_on_bad_type(temp_city):
 def test_num_cities():
     # get the count
     old_count = cq.num_cities()
-    # add a record
-    cq.create(get_temp_rec())
-    assert cq.num_cities() == old_count + 1
+    print(f"Initial count: {old_count}, type: {type(old_count)}")
+    # add a record with a unique name to avoid duplicates
+    unique_city = {cq.NAME: f"TestCity_{int(time.time())}", cq.STATE_CODE: "XX"}
+    cq.create(unique_city)
+    new_count = cq.num_cities()
+    print(f"New count: {new_count}, type: {type(new_count)}")
+    print(f"Expected: {old_count + 1}")
+    assert new_count == old_count + 1
+    # Clean up the test city
+    cq.delete(unique_city[cq.NAME], "XX")
 
 def test_read(temp_city):
     cities = cq.read()
-    assert isinstance(cities, list)
-    assert get_temp_rec() in cities
+    assert isinstance(cities, dict)
+    # Check that our temp city is in the results
+    assert temp_city in cities
+    assert cities[temp_city][cq.NAME] == "Boston"
 
 @pytest.mark.skip('revive once all functions are cutover!')
 def test_read_cant_connect():

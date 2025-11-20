@@ -8,6 +8,7 @@ API_DIR = server
 DB_DIR = data
 SEC_DIR = security
 REQ_DIR = .
+CITIES_DIR = cities
 
 FORCE:
 
@@ -20,6 +21,7 @@ github: FORCE
 all_tests: FORCE
 	cd $(API_DIR); make tests
 	cd $(SEC_DIR); make tests
+	cd $(CITIES_DIR); make tests
 	# cd $(DB_DIR); make tests
 
 dev_env: FORCE
