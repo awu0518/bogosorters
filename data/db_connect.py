@@ -62,9 +62,12 @@ def _build_mongo_uri() -> str | None:
         password = os.environ.get('MONGO_PASSWD')
         if not password:
             raise ValueError('You must set MONGO_PASSWD to use Mongo in the cloud.')
-        return (f'mongodb+srv://gcallah:{password}'
-                + '@koukoumongo1.yud9b.mongodb.net/'
-                + '?retryWrites=true&w=majority')
+        # return (f'mongodb+srv://gcallah:{password}'
+        #         + '@koukoumongo1.yud9b.mongodb.net/'
+        #         + '?retryWrites=true&w=majority')
+        return (f'mongodb+srv://limjiannn_db_user:{password}'
+                + '@cluster0.o6ypt6r.mongodb.net/'
+                + '?appName=Cluster0')
 
     # Fallback to None -> default local connection
     return None
