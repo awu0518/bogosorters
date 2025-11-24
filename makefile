@@ -9,6 +9,8 @@ DB_DIR = data
 SEC_DIR = security
 REQ_DIR = .
 CITIES_DIR = cities
+COUNTRIES_DIR = countries
+STATES_DIR = states
 
 FORCE:
 
@@ -22,6 +24,8 @@ all_tests: FORCE
 	cd $(API_DIR); make tests
 	cd $(SEC_DIR); make tests
 	cd $(CITIES_DIR); make tests
+	cd $(COUNTRIES_DIR); make tests
+	cd $(STATES_DIR); make tests
 	# cd $(DB_DIR); make tests
 
 dev_env: FORCE

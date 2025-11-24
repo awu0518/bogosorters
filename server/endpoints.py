@@ -12,6 +12,7 @@ from datetime import datetime
 from data import db_connect as dbc
 import cities.queries as cq
 import countries.queries as ctq
+import states.queries as stq
 
 # import werkzeug.exceptions as wz
 
@@ -38,7 +39,9 @@ CITIES_SEARCH_EP = '/cities/search'
 COUNTRIES_EP = '/countries'
 COUNTRIES_RESP = 'countries'
 COUNTRIES_SEARCH_EP = '/countries/search'
-STATES_EPS = '/states'
+STATES_EP = '/states'
+STATES_RESP = 'states'
+STATES_SEARCH_EP = '/states/search'
 
 
 @api.route(HELLO_EP)
@@ -416,6 +419,152 @@ class CountriesSearch(Resource):
             results = ctq.search(name=name, iso_code=iso_code)
             return {
                 COUNTRIES_RESP: results,
+                'count': len(results)
+            }
+        except Exception as e:
+            return {'error': str(e)}, 500
+
+
+@api.route(STATES_EP)
+class States(Resource):
+    """
+    This class handles operations on states collection.
+    """
+    def get(self):
+        """
+        Returns all states from the database.
+        Optional query parameter: state_code (to filter by state code)
+        """
+        try:
+            state_code = request.args.get('state_code')
+            if state_code:
+                state = stq.find_by_state_code(state_code)
+                if state:
+                    return {STATES_RESP: state}
+                else:
+                    error_msg = f'State with code {state_code} not found'
+                    return {'error': error_msg}, 404
+            # Optional pagination
+            page = request.args.get('page')
+            limit = request.args.get('limit')
+            if page is not None or limit is not None:
+                sort_by = request.args.get('sort_by', stq.NAME)
+                order = request.args.get('order', 'asc')
+                page_val = int(page) if page is not None else 1
+                limit_val = int(limit) if limit is not None else 50
+                data = stq.read_paginated(
+                    page=page_val,
+                    limit=limit_val,
+                    sort_by=sort_by,
+                    order=order
+                )
+                return {
+                    STATES_RESP: data['items'],
+                    'count': len(data['items']),
+                    'pagination': {
+                        'page': data['page'],
+                        'limit': data['limit'],
+                        'total': data['total'],
+                        'pages': data['pages'],
+                        'has_next': data['has_next'],
+                        'has_prev': data['has_prev'],
+                    }
+                }
+            else:
+                states = stq.read()
+                return {
+                    STATES_RESP: states,
+                    'count': len(states)
+                }
+        except Exception as e:
+            return {'error': str(e)}, 500
+
+    def post(self):
+        """
+        Create a new state.
+        Expected JSON body: {"name": "State Name", "state_code": "ST",
+                            "capital": "Capital City"}
+        """
+        try:
+            data = request.json
+            new_id = stq.create(data)
+            return {
+                MESSAGE: 'State created successfully',
+                'id': str(new_id)
+            }, 201
+        except ValueError as e:
+            return {'error': str(e)}, 400
+        except Exception as e:
+            return {'error': str(e)}, 500
+
+
+@api.route(f'{STATES_EP}/<state_id>')
+class StateById(Resource):
+    """
+    This class handles operations on a specific state.
+    """
+    def get(self, state_id):
+        """
+        Get a specific state by ID (name).
+        """
+        try:
+            state = stq.read_one(state_id)
+            return {STATES_RESP: state}
+        except ValueError as e:
+            return {'error': str(e)}, 404
+        except Exception as e:
+            return {'error': str(e)}, 500
+
+    def put(self, state_id):
+        """
+        Update a state by ID.
+        Expected JSON body: fields to update
+        """
+        try:
+            data = request.json
+            stq.update(state_id, data)
+            return {MESSAGE: f'State {state_id} updated successfully'}
+        except ValueError as e:
+            return {'error': str(e)}, 404
+        except Exception as e:
+            return {'error': str(e)}, 500
+
+    def delete(self, state_id):
+        """
+        Delete a state by ID.
+        """
+        try:
+            stq.delete(state_id)
+            return {MESSAGE: f'State {state_id} deleted successfully'}
+        except ValueError as e:
+            return {'error': str(e)}, 404
+        except Exception as e:
+            return {'error': str(e)}, 500
+
+
+@api.route(STATES_SEARCH_EP)
+class StatesSearch(Resource):
+    """
+    Search states by name, state code, and/or capital.
+    """
+    def get(self):
+        """
+        Search states with optional filters.
+        Query params: name (substring), state_code (exact), capital (substring)
+        """
+        try:
+            name = request.args.get('name')
+            state_code = request.args.get('state_code')
+            capital = request.args.get('capital')
+            if not name and not state_code and not capital:
+                err = ('Provide at least one parameter: '
+                       'name, state_code, or capital')
+                return {'error': err}, 400
+            results = stq.search(
+                name=name, state_code=state_code, capital=capital
+            )
+            return {
+                STATES_RESP: results,
                 'count': len(results)
             }
         except Exception as e:

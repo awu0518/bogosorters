@@ -11,6 +11,7 @@ import countries.queries as cq
 @pytest.fixture(scope='function')
 def clear_country_cache():
     cq.country_cache.clear()
+    cq._next_id = 1  # Reset the ID counter
     yield
     cq.country_cache.clear()
 
@@ -62,12 +63,12 @@ def test_create_multiple(clear_country_cache):
 
 # WITH RAISES: invalid inputs
 def test_create_raises_on_bad_type(clear_country_cache):
-    with pytest.raises(ValueError, match="Bad type"):
+    with pytest.raises(ValueError, match="Request body must be a JSON object"):
         cq.create(["not", "a", "dict"])
 
 
 def test_create_raises_on_missing_name(clear_country_cache):
-    with pytest.raises(ValueError, match="Bad value"):
+    with pytest.raises(ValueError, match="Missing required fields"):
         cq.create({cq.ISO_CODE: "XX"})
 
 
