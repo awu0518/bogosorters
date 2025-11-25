@@ -5,7 +5,7 @@ The endpoint called `endpoints` will return all available endpoints.
 # from http import HTTPStatus
 
 from flask import Flask, request
-from flask_restx import Resource, Api
+from flask_restx import Resource, Api, fields
 from flask_cors import CORS
 import random
 from datetime import datetime
@@ -18,7 +18,22 @@ import states.queries as stq
 
 app = Flask(__name__)
 CORS(app)
-api = Api(app)
+api = Api(
+    app,
+    version='1.0',
+    title='Geographic Database API',
+    description='A comprehensive REST API for managing geographic data '
+                'including countries, states, and cities',
+    doc='/docs/',  # Swagger UI will be available at /docs/
+    contact_email='support@geodatabase.com',
+    authorizations={
+        'apikey': {
+            'type': 'apiKey',
+            'in': 'header',
+            'name': 'X-API-KEY'
+        }
+    }
+)
 
 ENDPOINT_EP = '/endpoints'
 ENDPOINT_RESP = 'Available endpoints'
@@ -42,6 +57,74 @@ COUNTRIES_SEARCH_EP = '/countries/search'
 STATES_EP = '/states'
 STATES_RESP = 'states'
 STATES_SEARCH_EP = '/states/search'
+
+# Swagger Models for Documentation
+city_model = api.model('City', {
+    'name': fields.String(required=True, description='City name',
+                          example='New York'),
+    'state_code': fields.String(required=True, description='State code',
+                                example='NY')
+})
+
+city_response = api.model('CityResponse', {
+    'cities': fields.Raw(description='Dictionary of cities keyed by name'),
+    'count': fields.Integer(description='Number of cities returned')
+})
+
+country_model = api.model('Country', {
+    'name': fields.String(required=True, description='Country name',
+                          example='United States'),
+    'iso_code': fields.String(required=True, description='ISO country code',
+                              example='US')
+})
+
+country_response = api.model('CountryResponse', {
+    'countries': fields.Raw(description='Dictionary of countries '
+                            'keyed by name'),
+    'count': fields.Integer(description='Number of countries returned')
+})
+
+state_model = api.model('State', {
+    'name': fields.String(required=True, description='State name',
+                          example='New York'),
+    'state_code': fields.String(required=True, description='State code',
+                                example='NY'),
+    'capital': fields.String(required=True, description='Capital city',
+                             example='Albany')
+})
+
+state_response = api.model('StateResponse', {
+    'states': fields.Raw(description='Dictionary of states keyed by name'),
+    'count': fields.Integer(description='Number of states returned')
+})
+
+error_response = api.model('Error', {
+    'error': fields.String(description='Error message',
+                           example='Resource not found')
+})
+
+success_response = api.model('Success', {
+    'Message': fields.String(description='Success message',
+                             example='Resource created successfully'),
+    'id': fields.String(description='Created resource ID',
+                        example='507f1f77bcf86cd799439011')
+})
+
+pagination_response = api.model('PaginationMeta', {
+    'page': fields.Integer(description='Current page number', example=1),
+    'limit': fields.Integer(description='Items per page', example=50),
+    'total': fields.Integer(description='Total number of items',
+                            example=150),
+    'pages': fields.Integer(description='Total number of pages', example=3),
+    'has_next': fields.Boolean(description='Has next page', example=True),
+    'has_prev': fields.Boolean(description='Has previous page',
+                               example=False)
+})
+
+# Create namespaces for better organization
+geographic_ns = api.namespace('geographic',
+                              description='Geographic data operations')
+utility_ns = api.namespace('utility', description='Utility endpoints')
 
 
 @api.route(HELLO_EP)
@@ -177,9 +260,23 @@ class Cities(Resource):
     """
     This class handles operations on cities collection.
     """
+
+    @api.doc('get_all_cities')
+    @api.doc(params={
+        'page': 'Page number for pagination (optional)',
+        'limit': 'Number of items per page (optional)',
+        'sort_by': 'Field to sort by (default: name)',
+        'order': 'Sort order: asc or desc (default: asc)'
+    })
+    @api.marshal_with(city_response)
+    @api.response(200, 'Success', city_response)
+    @api.response(500, 'Internal Server Error', error_response)
     def get(self):
         """
-        Returns all cities from the database.
+        Get all cities with optional pagination and sorting.
+
+        Returns a dictionary of cities keyed by city name, with optional
+        pagination metadata.
         """
         try:
             # Optional pagination
@@ -217,10 +314,17 @@ class Cities(Resource):
         except Exception as e:
             return {'error': str(e)}, 500
 
+    @api.doc('create_city')
+    @api.expect(city_model)
+    @api.response(201, 'City created successfully', success_response)
+    @api.response(400, 'Validation Error', error_response)
+    @api.response(500, 'Internal Server Error', error_response)
     def post(self):
         """
         Create a new city.
-        Expected JSON body: {"name": "City Name", "state_code": "ST"}
+
+        Creates a new city with the provided name and state code.
+        The city name should be unique within the state.
         """
         try:
             data = request.json
