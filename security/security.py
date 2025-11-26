@@ -100,3 +100,19 @@ def read_feature(feature_name: str) -> dict:
         return security_recs[feature_name]
     else:
         return None
+
+
+@needs_recs
+def has_permission(user_email: str, feature: str, operation: str) -> bool:
+
+    # Check if a user has permission to perform an operation on a feature.
+
+    # Returns True if user is authorized, False otherwise.
+    feature_data = read_feature(feature)
+    if not feature_data:
+        return False
+    op_data = feature_data.get(operation)
+    if not op_data:
+        return False
+    user_list = op_data.get(USER_LIST, [])
+    return user_email in user_list
