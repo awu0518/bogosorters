@@ -116,3 +116,18 @@ def has_permission(user_email: str, feature: str, operation: str) -> bool:
         return False
     user_list = op_data.get(USER_LIST, [])
     return user_email in user_list
+
+
+@needs_recs
+def check_required(feature: str, operation: str, check_name: str) -> bool:
+    # Check if a specific security check is required for an operation.
+
+    # Returns True if the check is required, False otherwise.
+    feature_data = read_feature(feature)
+    if not feature_data:
+        return False
+    op_data = feature_data.get(operation)
+    if not op_data:
+        return False
+    checks = op_data.get(CHECKS, {})
+    return checks.get(check_name, False)
