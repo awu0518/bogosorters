@@ -117,10 +117,16 @@ def read_paginated(page: int = 1,
 def create(flds: dict) -> str:
     # Validate input
     validation.validate_required_fields(flds, [NAME, STATE_CODE])
-    validation.validate_string_length(flds[NAME], 'name', max_length=100)
-    validation.validate_string_length(
-        flds[STATE_CODE], 'state_code', max_length=2
-    )
+
+    # Validate no extra fields
+    validation.validate_no_extra_fields(flds, [NAME, STATE_CODE])
+
+    # Validate name
+    validation.validate_string_length(flds[NAME], 'name',
+                                      min_length=1, max_length=100)
+
+    # Validate state code format (2 uppercase letters)
+    validation.validate_state_code(flds[STATE_CODE], 'state_code')
 
     new_id = dbc.create(CITY_COLLECTION, flds)
     # Invalidate cache entry if it exists (unlikely but possible)
@@ -161,8 +167,22 @@ def update(city_id: str, flds: dict) -> bool:
     Update an existing city with new field values.
     Returns True on success.
     """
+    # Validate input type
     if not isinstance(flds, dict):
         raise ValueError(f'Bad type for {type(flds)=}')
+
+    # Validate no extra fields
+    validation.validate_no_extra_fields(flds, [NAME, STATE_CODE])
+
+    # Validate name if present
+    if NAME in flds:
+        validation.validate_string_length(flds[NAME], 'name',
+                                          min_length=1, max_length=100)
+
+    # Validate state code if present
+    if STATE_CODE in flds:
+        validation.validate_state_code(flds[STATE_CODE], 'state_code')
+
     cities = read()
     if city_id not in cities:
         raise ValueError(f'No such city: {city_id}')

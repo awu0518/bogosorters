@@ -105,9 +105,16 @@ def create(flds: dict) -> str:
     global _next_id
     # Validate input
     validation.validate_required_fields(flds, [NAME, ISO_CODE])
-    validation.validate_string_length(flds[NAME], 'name', max_length=100)
-    validation.validate_string_length(flds[ISO_CODE], 'iso_code',
-                                      max_length=3)
+
+    # Validate no extra fields
+    validation.validate_no_extra_fields(flds, [NAME, ISO_CODE])
+
+    # Validate name
+    validation.validate_string_length(flds[NAME], 'name',
+                                      min_length=1, max_length=100)
+
+    # Validate ISO code format (2-3 uppercase letters)
+    validation.validate_iso_code(flds[ISO_CODE], 'iso_code')
 
     # Use cache for testing
     new_id = str(_next_id)
@@ -146,8 +153,22 @@ def update(country_id: str, flds: dict) -> bool:
     Update an existing country with new field values.
     Returns True on success.
     """
+    # Validate input type
     if not isinstance(flds, dict):
         raise ValueError(f'Bad type for {type(flds)=}')
+
+    # Validate no extra fields
+    validation.validate_no_extra_fields(flds, [NAME, ISO_CODE])
+
+    # Validate name if present
+    if NAME in flds:
+        validation.validate_string_length(flds[NAME], 'name',
+                                          min_length=1, max_length=100)
+
+    # Validate ISO code if present
+    if ISO_CODE in flds:
+        validation.validate_iso_code(flds[ISO_CODE], 'iso_code')
+
     countries = read()
     if country_id not in countries:
         raise ValueError(f'No such country: {country_id}')

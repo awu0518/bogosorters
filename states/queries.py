@@ -97,20 +97,26 @@ def find_by_state_code(state_code: str) -> Optional[dict]:
 def create(flds: dict) -> str:
     """Create a new state."""
     # Validate required fields
-    validation.validate_required_fields(flds, [NAME, STATE_CODE])
+    validation.validate_required_fields(flds, [NAME, STATE_CODE, CAPITAL])
+
+    # Validate no extra fields (allow optional fields)
+    allowed = [NAME, STATE_CODE, CAPITAL, POPULATION]
+    validation.validate_no_extra_fields(flds, allowed)
+
+    # Validate name
     validation.validate_string_length(flds[NAME], 'name',
-                                      max_length=100)
-    validation.validate_string_length(flds[STATE_CODE], 'state_code',
-                                      max_length=2)
+                                      min_length=1, max_length=100)
 
-    # Validate state_code is exactly 2 characters
-    if len(flds[STATE_CODE]) != 2:
-        raise ValueError('state_code must be exactly 2 characters')
+    # Validate state code format (2 uppercase letters)
+    validation.validate_state_code(flds[STATE_CODE], 'state_code')
 
-    # Optional field validation
-    if CAPITAL in flds:
-        validation.validate_string_length(flds[CAPITAL], 'capital',
-                                          max_length=100)
+    # Validate capital
+    validation.validate_string_length(flds[CAPITAL], 'capital',
+                                      min_length=1, max_length=100)
+
+    # Optional: validate population if present
+    if POPULATION in flds:
+        validation.validate_positive_integer(flds[POPULATION], 'population')
 
     new_id = dbc.create(STATE_COLLECTION, flds)
     return str(new_id.inserted_id)
@@ -132,8 +138,32 @@ def update(state_id: str, flds: dict) -> bool:
     Update an existing state with new field values.
     Returns True on success.
     """
+    # Validate input type
     if not isinstance(flds, dict):
         raise ValueError(f'Bad type for {type(flds)=}')
+
+    # Validate no extra fields
+    allowed = [NAME, STATE_CODE, CAPITAL, POPULATION]
+    validation.validate_no_extra_fields(flds, allowed)
+
+    # Validate name if present
+    if NAME in flds:
+        validation.validate_string_length(flds[NAME], 'name',
+                                          min_length=1, max_length=100)
+
+    # Validate state code if present
+    if STATE_CODE in flds:
+        validation.validate_state_code(flds[STATE_CODE], 'state_code')
+
+    # Validate capital if present
+    if CAPITAL in flds:
+        validation.validate_string_length(flds[CAPITAL], 'capital',
+                                          min_length=1, max_length=100)
+
+    # Validate population if present
+    if POPULATION in flds:
+        validation.validate_positive_integer(flds[POPULATION], 'population')
+
     states = read()
     if state_id not in states:
         raise ValueError(f'No such state: {state_id}')
