@@ -133,14 +133,14 @@ class HelloWorld(Resource):
     The purpose of the HelloWorld class is to have a simple test to see if the
     app is working at all.
     """
-    
+
     @api.doc('hello_world')
     @api.response(200, 'Success - Server is running')
     def get(self):
         """
         Health check endpoint to verify server is running.
-        
-        Returns a simple 'hello world' message to confirm the API is accessible.
+
+        Returns a simple 'hello world' message to confirm the API is accessible
         """
         return {HELLO_RESP: 'world'}
 
@@ -151,13 +151,13 @@ class Endpoints(Resource):
     This class will serve as live, fetchable documentation of what endpoints
     are available in the system.
     """
-    
+
     @api.doc('list_endpoints')
     @api.response(200, 'Success - List of available endpoints')
     def get(self):
         """
         Get all available API endpoints.
-        
+
         Returns a sorted list of all registered endpoints in the system.
         Useful for API discovery and documentation.
         """
@@ -170,13 +170,13 @@ class Timestamp(Resource):
     """
     This class returns the current server timestamp.
     """
-    
+
     @api.doc('get_timestamp')
     @api.response(200, 'Success - Current server timestamp')
     def get(self):
         """
         Get current server timestamp.
-        
+
         Returns the current server time in both ISO format and Unix timestamp.
         Useful for synchronization and logging.
         """
@@ -192,7 +192,7 @@ class RandomNumber(Resource):
     """
     This class generates and returns random numbers.
     """
-    
+
     @api.doc('get_random_number')
     @api.doc(params={
         'min': 'Minimum value (optional, default: 1)',
@@ -202,7 +202,7 @@ class RandomNumber(Resource):
     def get(self):
         """
         Generate a random number.
-        
+
         Returns a random integer between the specified min and max values.
         Default range is 1-100 if no parameters provided.
         """
@@ -220,13 +220,13 @@ class DiceRoller(Resource):
     """
     This class simulates rolling dice.
     """
-    
+
     @api.doc('roll_default_dice')
     @api.response(200, 'Success - Dice rolled')
     def get(self):
         """
         Roll two six-sided dice.
-        
+
         Simulates rolling 2 six-sided dice and returns individual rolls,
         total sum, and dice configuration.
         """
@@ -242,15 +242,19 @@ class DiceRoller(Resource):
 
     @api.doc('roll_custom_dice')
     @api.expect(api.model('DiceConfig', {
-        'num_dice': fields.Integer(required=True, description='Number of dice to roll (1-100)', example=3),
-        'sides': fields.Integer(required=True, description='Number of sides per die (2-1000)', example=20)
+        'num_dice': fields.Integer(required=True,
+                                   description='Number of dice (1-100)',
+                                   example=3),
+        'sides': fields.Integer(required=True,
+                                description='Number of sides per die (2-1000)',
+                                example=20)
     }))
     @api.response(200, 'Success - Custom dice rolled')
     @api.response(400, 'Invalid dice configuration')
     def post(self):
         """
         Roll custom dice configuration.
-        
+
         Accepts JSON with num_dice and sides to simulate rolling
         custom dice (e.g., D20, D12, multiple dice).
         Constraints: 1 <= num_dice <= 100, 2 <= sides <= 1000
@@ -283,18 +287,18 @@ class Health(Resource):
     """
     Enhanced health check endpoint with database statistics.
     """
-    
+
     @api.doc('health_check')
     @api.response(200, 'Success - System is healthy')
     @api.response(503, 'Service degraded - Database issues')
     def get(self):
         """
         Comprehensive health check.
-        
+
         Returns server liveness, database health details, and collection
         statistics including:
         - Server timestamp and uptime
-        - Database connectivity status  
+        - Database connectivity status
         - Collection counts (countries, states, cities)
         - Overall system health status
         """
@@ -476,23 +480,24 @@ class CitiesSearch(Resource):
     """
     Search cities by name and/or state code.
     """
-    
+
     @api.doc('search_cities')
     @api.doc(params={
         'name': 'City name to search for (substring match, optional)',
         'state_code': 'State code to filter by (exact match, optional)'
     })
     @api.response(200, 'Success - Cities found', city_response)
-    @api.response(400, 'Bad Request - No search parameters provided', error_response)
+    @api.response(400, 'Bad Request - No search parameters provided',
+                  error_response)
     @api.response(500, 'Internal Server Error', error_response)
     def get(self):
         """
         Search cities by name and/or state code.
-        
+
         Performs flexible search across cities using:
         - name: Substring matching (case-insensitive)
         - state_code: Exact matching
-        
+
         At least one parameter must be provided.
         """
         try:
@@ -517,7 +522,7 @@ class Countries(Resource):
     """
     This class handles operations on countries collection.
     """
-    
+
     @api.doc('get_all_countries')
     @api.doc(params={
         'iso_code': 'ISO country code to filter by (optional)',
@@ -532,7 +537,7 @@ class Countries(Resource):
     def get(self):
         """
         Get all countries with optional filtering and pagination.
-        
+
         Returns a dictionary of countries keyed by name. Can be filtered
         by ISO code or paginated for large datasets.
         """
@@ -588,7 +593,7 @@ class Countries(Resource):
     def post(self):
         """
         Create a new country.
-        
+
         Creates a new country with the provided name and ISO code.
         The ISO code should be unique (e.g., 'US', 'CA', 'FR').
         """
@@ -667,7 +672,7 @@ class CountriesSearch(Resource):
     """
     Search countries by name and/or ISO code.
     """
-    
+
     @api.doc('search_countries')
     @api.doc(params={
         'name': 'Country name to search for (substring match, optional)',
@@ -679,11 +684,11 @@ class CountriesSearch(Resource):
     def get(self):
         """
         Search countries by name and/or ISO code.
-        
+
         Performs flexible search across countries using:
         - name: Substring matching (case-insensitive)
         - iso_code: Exact matching
-        
+
         At least one parameter must be provided.
         """
         try:
