@@ -238,20 +238,78 @@ class DiceRoller(Resource):
 @api.route(HEALTH_EP)
 class Health(Resource):
     """
-    Basic health check endpoint.
+    Enhanced health check endpoint with database statistics.
     """
     def get(self):
         """
-        Returns server liveness and database health details.
+        Returns server liveness, database health details, and collection
+        statistics.
+
+        Includes:
+        - Server timestamp
+        - Database connectivity status
+        - Collection counts (countries, states, cities)
+        - Database statistics and size information
         """
         now = datetime.now()
         db_status = dbc.ping()
         overall = 'ok' if db_status.get('ok') else 'degraded'
+
+        # Gather collection statistics
+        collections_stats = {}
+        db_stats = {}
+
+        try:
+            client = dbc.get_client()
+            db = client[dbc.SE_DB]
+
+            # Get collection counts
+            collections_stats = {
+                'countries': {
+                    'count': db['countries'].count_documents({}),
+                    'name': 'countries'
+                },
+                'states': {
+                    'count': db['states'].count_documents({}),
+                    'name': 'states'
+                },
+                'cities': {
+                    'count': db['cities'].count_documents({}),
+                    'name': 'cities'
+                }
+            }
+
+            # Get database statistics
+            db_stats_raw = db.command('dbStats')
+            db_stats = {
+                'database': db_stats_raw.get('db', 'seDB'),
+                'collections': db_stats_raw.get('collections', 0),
+                'data_size_bytes': db_stats_raw.get('dataSize', 0),
+                'storage_size_bytes': db_stats_raw.get('storageSize', 0),
+                'indexes': db_stats_raw.get('indexes', 0),
+                'index_size_bytes': db_stats_raw.get('indexSize', 0),
+            }
+
+            # Calculate total documents
+            total_docs = sum(c['count'] for c in collections_stats.values())
+
+        except Exception as e:
+            # If stats gathering fails, set empty stats and mark as degraded
+            overall = 'degraded'
+            collections_stats = {
+                'error': f'Failed to gather collection stats: {str(e)}'
+            }
+            db_stats = {}
+            total_docs = 0
+
         return {
             HEALTH_RESP: overall,
             'timestamp': now.isoformat(),
             'unix': now.timestamp(),
-            'db': db_status
+            'db': db_status,
+            'collections': collections_stats,
+            'database_stats': db_stats,
+            'total_documents': total_docs
         }
 
 

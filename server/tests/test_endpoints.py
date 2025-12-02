@@ -198,3 +198,102 @@ def test_timestamp_returns_valid_format(client):
     timestamp_str = data[ep.TIMESTAMP_RESP]
     parsed_time = datetime.fromisoformat(timestamp_str)
     assert isinstance(parsed_time, datetime)
+
+
+# HEALTH ENDPOINT TESTS
+def test_health_endpoint_returns_ok(client):
+    """Test that health endpoint returns successfully."""
+    resp = client.get(ep.HEALTH_EP)
+    data = resp.get_json()
+    
+    assert resp.status_code == OK
+    assert ep.HEALTH_RESP in data
+    assert data[ep.HEALTH_RESP] in ['ok', 'degraded']
+
+
+def test_health_endpoint_has_timestamp(client):
+    """Test that health endpoint includes timestamp information."""
+    resp = client.get(ep.HEALTH_EP)
+    data = resp.get_json()
+    
+    assert resp.status_code == OK
+    assert 'timestamp' in data
+    assert 'unix' in data
+    
+    # Verify timestamp is valid ISO format
+    timestamp_str = data['timestamp']
+    parsed_time = datetime.fromisoformat(timestamp_str)
+    assert isinstance(parsed_time, datetime)
+
+
+def test_health_endpoint_has_db_status(client):
+    """Test that health endpoint includes database status."""
+    resp = client.get(ep.HEALTH_EP)
+    data = resp.get_json()
+    
+    assert resp.status_code == OK
+    assert 'db' in data
+    assert 'ok' in data['db']
+
+
+def test_health_endpoint_has_collection_stats(client):
+    """Test that health endpoint includes collection statistics."""
+    resp = client.get(ep.HEALTH_EP)
+    data = resp.get_json()
+    
+    assert resp.status_code == OK
+    assert 'collections' in data
+    
+    # Check if stats were gathered successfully
+    if 'error' not in data['collections']:
+        assert 'countries' in data['collections']
+        assert 'states' in data['collections']
+        assert 'cities' in data['collections']
+        
+        # Verify each collection has count
+        for collection_name in ['countries', 'states', 'cities']:
+            collection_data = data['collections'][collection_name]
+            assert 'count' in collection_data
+            assert isinstance(collection_data['count'], int)
+            assert collection_data['count'] >= 0
+
+
+def test_health_endpoint_has_database_stats(client):
+    """Test that health endpoint includes database statistics."""
+    resp = client.get(ep.HEALTH_EP)
+    data = resp.get_json()
+    
+    assert resp.status_code == OK
+    assert 'database_stats' in data
+    
+    # Check if database stats were gathered successfully
+    if data['database_stats']:  # Not empty dict
+        assert 'database' in data['database_stats']
+        assert 'collections' in data['database_stats']
+        assert 'data_size_bytes' in data['database_stats']
+
+
+def test_health_endpoint_has_total_documents(client):
+    """Test that health endpoint includes total document count."""
+    resp = client.get(ep.HEALTH_EP)
+    data = resp.get_json()
+    
+    assert resp.status_code == OK
+    assert 'total_documents' in data
+    assert isinstance(data['total_documents'], int)
+    assert data['total_documents'] >= 0
+
+
+@patch('server.endpoints.dbc.get_client')
+def test_health_endpoint_handles_db_failure(mock_get_client, client):
+    """Test that health endpoint gracefully handles database failures."""
+    # Mock database failure
+    mock_get_client.side_effect = Exception("Database connection failed")
+    
+    resp = client.get(ep.HEALTH_EP)
+    data = resp.get_json()
+    
+    assert resp.status_code == OK
+    assert data[ep.HEALTH_RESP] == 'degraded'
+    assert 'collections' in data
+    assert 'error' in data['collections']
