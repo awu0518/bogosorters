@@ -133,9 +133,14 @@ class HelloWorld(Resource):
     The purpose of the HelloWorld class is to have a simple test to see if the
     app is working at all.
     """
+    
+    @api.doc('hello_world')
+    @api.response(200, 'Success - Server is running')
     def get(self):
         """
-        A trivial endpoint to see if the server is running.
+        Health check endpoint to verify server is running.
+        
+        Returns a simple 'hello world' message to confirm the API is accessible.
         """
         return {HELLO_RESP: 'world'}
 
@@ -146,9 +151,15 @@ class Endpoints(Resource):
     This class will serve as live, fetchable documentation of what endpoints
     are available in the system.
     """
+    
+    @api.doc('list_endpoints')
+    @api.response(200, 'Success - List of available endpoints')
     def get(self):
         """
-        The `get()` method will return a sorted list of available endpoints.
+        Get all available API endpoints.
+        
+        Returns a sorted list of all registered endpoints in the system.
+        Useful for API discovery and documentation.
         """
         endpoints = sorted(rule.rule for rule in api.app.url_map.iter_rules())
         return {ENDPOINT_RESP: endpoints}
@@ -159,9 +170,15 @@ class Timestamp(Resource):
     """
     This class returns the current server timestamp.
     """
+    
+    @api.doc('get_timestamp')
+    @api.response(200, 'Success - Current server timestamp')
     def get(self):
         """
-        Returns the current server time in ISO format.
+        Get current server timestamp.
+        
+        Returns the current server time in both ISO format and Unix timestamp.
+        Useful for synchronization and logging.
         """
         current_time = datetime.now().isoformat()
         return {
@@ -175,14 +192,26 @@ class RandomNumber(Resource):
     """
     This class generates and returns random numbers.
     """
+    
+    @api.doc('get_random_number')
+    @api.doc(params={
+        'min': 'Minimum value (optional, default: 1)',
+        'max': 'Maximum value (optional, default: 100)'
+    })
+    @api.response(200, 'Success - Random number generated')
     def get(self):
         """
-        Returns a random integer between 1 and 100.
+        Generate a random number.
+        
+        Returns a random integer between the specified min and max values.
+        Default range is 1-100 if no parameters provided.
         """
+        min_val = int(request.args.get('min', 1))
+        max_val = int(request.args.get('max', 100))
         return {
-            RANDOM_RESP: random.randint(1, 100),
-            'min': 1,
-            'max': 100
+            RANDOM_RESP: random.randint(min_val, max_val),
+            'min': min_val,
+            'max': max_val
         }
 
 
@@ -191,9 +220,15 @@ class DiceRoller(Resource):
     """
     This class simulates rolling dice.
     """
+    
+    @api.doc('roll_default_dice')
+    @api.response(200, 'Success - Dice rolled')
     def get(self):
         """
-        Simulates rolling 2 six-sided dice and returns the results.
+        Roll two six-sided dice.
+        
+        Simulates rolling 2 six-sided dice and returns individual rolls,
+        total sum, and dice configuration.
         """
         num_dice = 2
         sides = 6
@@ -205,11 +240,19 @@ class DiceRoller(Resource):
             'sides': sides
         }
 
+    @api.doc('roll_custom_dice')
+    @api.expect(api.model('DiceConfig', {
+        'num_dice': fields.Integer(required=True, description='Number of dice to roll (1-100)', example=3),
+        'sides': fields.Integer(required=True, description='Number of sides per die (2-1000)', example=20)
+    }))
+    @api.response(200, 'Success - Custom dice rolled')
+    @api.response(400, 'Invalid dice configuration')
     def post(self):
         """
-        Simulates rolling custom dice specified in JSON body.
-        JSON: {"num_dice": int, "sides": int}
-        Defaults: num_dice=2, sides=6
+        Roll custom dice configuration.
+        
+        Accepts JSON with num_dice and sides to simulate rolling
+        custom dice (e.g., D20, D12, multiple dice).
         Constraints: 1 <= num_dice <= 100, 2 <= sides <= 1000
         """
         data = request.get_json(silent=True) or {}
@@ -240,16 +283,20 @@ class Health(Resource):
     """
     Enhanced health check endpoint with database statistics.
     """
+    
+    @api.doc('health_check')
+    @api.response(200, 'Success - System is healthy')
+    @api.response(503, 'Service degraded - Database issues')
     def get(self):
         """
+        Comprehensive health check.
+        
         Returns server liveness, database health details, and collection
-        statistics.
-
-        Includes:
-        - Server timestamp
-        - Database connectivity status
+        statistics including:
+        - Server timestamp and uptime
+        - Database connectivity status  
         - Collection counts (countries, states, cities)
-        - Database statistics and size information
+        - Overall system health status
         """
         now = datetime.now()
         db_status = dbc.ping()
@@ -402,6 +449,11 @@ class CityByName(Resource):
     """
     This class handles operations on a specific city.
     """
+    @api.doc('delete_city_by_name')
+    @api.response(200, 'City deleted successfully')
+    @api.response(400, 'Missing state_code parameter', error_response)
+    @api.response(404, 'City not found', error_response)
+    @api.response(500, 'Internal Server Error', error_response)
     def delete(self, city_name):
         """
         Delete a city by name.
@@ -424,10 +476,24 @@ class CitiesSearch(Resource):
     """
     Search cities by name and/or state code.
     """
+    
+    @api.doc('search_cities')
+    @api.doc(params={
+        'name': 'City name to search for (substring match, optional)',
+        'state_code': 'State code to filter by (exact match, optional)'
+    })
+    @api.response(200, 'Success - Cities found', city_response)
+    @api.response(400, 'Bad Request - No search parameters provided', error_response)
+    @api.response(500, 'Internal Server Error', error_response)
     def get(self):
         """
-        Search cities with optional filters.
-        Query params: name (substring), state_code (exact)
+        Search cities by name and/or state code.
+        
+        Performs flexible search across cities using:
+        - name: Substring matching (case-insensitive)
+        - state_code: Exact matching
+        
+        At least one parameter must be provided.
         """
         try:
             name = request.args.get('name')
@@ -451,10 +517,24 @@ class Countries(Resource):
     """
     This class handles operations on countries collection.
     """
+    
+    @api.doc('get_all_countries')
+    @api.doc(params={
+        'iso_code': 'ISO country code to filter by (optional)',
+        'page': 'Page number for pagination (optional)',
+        'limit': 'Number of items per page (optional)',
+        'sort_by': 'Field to sort by (default: name)',
+        'order': 'Sort order: asc or desc (default: asc)'
+    })
+    @api.response(200, 'Success', country_response)
+    @api.response(404, 'Country not found', error_response)
+    @api.response(500, 'Internal Server Error', error_response)
     def get(self):
         """
-        Returns all countries from the database.
-        Optional query parameter: iso_code (to filter by ISO code)
+        Get all countries with optional filtering and pagination.
+        
+        Returns a dictionary of countries keyed by name. Can be filtered
+        by ISO code or paginated for large datasets.
         """
         try:
             iso_code = request.args.get('iso_code')
@@ -500,10 +580,17 @@ class Countries(Resource):
         except Exception as e:
             return {'error': str(e)}, 500
 
+    @api.doc('create_country')
+    @api.expect(country_model)
+    @api.response(201, 'Country created successfully', success_response)
+    @api.response(400, 'Validation Error', error_response)
+    @api.response(500, 'Internal Server Error', error_response)
     def post(self):
         """
         Create a new country.
-        Expected JSON body: {"name": "Country Name", "iso_code": "CC"}
+        
+        Creates a new country with the provided name and ISO code.
+        The ISO code should be unique (e.g., 'US', 'CA', 'FR').
         """
         try:
             data = request.json
@@ -523,6 +610,10 @@ class CountryById(Resource):
     """
     This class handles operations on a specific country.
     """
+    @api.doc('get_country_by_id')
+    @api.response(200, 'Success', country_response)
+    @api.response(404, 'Country not found', error_response)
+    @api.response(500, 'Internal Server Error', error_response)
     def get(self, country_id):
         """
         Get a specific country by ID (name).
@@ -535,6 +626,11 @@ class CountryById(Resource):
         except Exception as e:
             return {'error': str(e)}, 500
 
+    @api.doc('update_country_by_id')
+    @api.expect(country_model)
+    @api.response(200, 'Country updated successfully')
+    @api.response(404, 'Country not found', error_response)
+    @api.response(500, 'Internal Server Error', error_response)
     def put(self, country_id):
         """
         Update a country by ID.
@@ -549,6 +645,10 @@ class CountryById(Resource):
         except Exception as e:
             return {'error': str(e)}, 500
 
+    @api.doc('delete_country_by_id')
+    @api.response(200, 'Country deleted successfully')
+    @api.response(404, 'Country not found', error_response)
+    @api.response(500, 'Internal Server Error', error_response)
     def delete(self, country_id):
         """
         Delete a country by ID.
@@ -567,10 +667,24 @@ class CountriesSearch(Resource):
     """
     Search countries by name and/or ISO code.
     """
+    
+    @api.doc('search_countries')
+    @api.doc(params={
+        'name': 'Country name to search for (substring match, optional)',
+        'iso_code': 'ISO country code (exact match, optional)'
+    })
+    @api.response(200, 'Success - Countries found', country_response)
+    @api.response(400, 'Bad Request - No search parameters', error_response)
+    @api.response(500, 'Internal Server Error', error_response)
     def get(self):
         """
-        Search countries with optional filters.
-        Query params: name (substring), iso_code (exact)
+        Search countries by name and/or ISO code.
+        
+        Performs flexible search across countries using:
+        - name: Substring matching (case-insensitive)
+        - iso_code: Exact matching
+        
+        At least one parameter must be provided.
         """
         try:
             name = request.args.get('name')
@@ -592,6 +706,10 @@ class States(Resource):
     """
     This class handles operations on states collection.
     """
+    @api.doc('get_all_states')
+    @api.response(200, 'Success', state_response)
+    @api.response(404, 'State not found', error_response)
+    @api.response(500, 'Internal Server Error', error_response)
     def get(self):
         """
         Returns all states from the database.
@@ -641,6 +759,11 @@ class States(Resource):
         except Exception as e:
             return {'error': str(e)}, 500
 
+    @api.doc('create_state')
+    @api.expect(state_model)
+    @api.response(201, 'State created successfully')
+    @api.response(400, 'Validation Error', error_response)
+    @api.response(500, 'Internal Server Error', error_response)
     def post(self):
         """
         Create a new state.
@@ -665,6 +788,10 @@ class StateById(Resource):
     """
     This class handles operations on a specific state.
     """
+    @api.doc('get_state_by_id')
+    @api.response(200, 'Success', state_response)
+    @api.response(404, 'State not found', error_response)
+    @api.response(500, 'Internal Server Error', error_response)
     def get(self, state_id):
         """
         Get a specific state by ID (name).
@@ -677,6 +804,11 @@ class StateById(Resource):
         except Exception as e:
             return {'error': str(e)}, 500
 
+    @api.doc('update_state_by_id')
+    @api.expect(state_model)
+    @api.response(200, 'State updated successfully')
+    @api.response(404, 'State not found', error_response)
+    @api.response(500, 'Internal Server Error', error_response)
     def put(self, state_id):
         """
         Update a state by ID.
@@ -691,6 +823,10 @@ class StateById(Resource):
         except Exception as e:
             return {'error': str(e)}, 500
 
+    @api.doc('delete_state_by_id')
+    @api.response(200, 'State deleted successfully')
+    @api.response(404, 'State not found', error_response)
+    @api.response(500, 'Internal Server Error', error_response)
     def delete(self, state_id):
         """
         Delete a state by ID.
@@ -709,6 +845,10 @@ class StatesSearch(Resource):
     """
     Search states by name, state code, and/or capital.
     """
+    @api.doc('search_states')
+    @api.response(200, 'Search results', state_response)
+    @api.response(400, 'Missing search parameters', error_response)
+    @api.response(500, 'Internal Server Error', error_response)
     def get(self):
         """
         Search states with optional filters.
