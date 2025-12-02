@@ -675,5 +675,192 @@ class StatesSearch(Resource):
             return {'error': str(e)}, 500
 
 
+# Bulk operations endpoints
+COUNTRIES_BULK_EP = '/countries/bulk'
+CITIES_BULK_EP = '/cities/bulk'
+STATES_BULK_EP = '/states/bulk'
+
+
+@api.route(COUNTRIES_BULK_EP)
+class CountriesBulk(Resource):
+    """
+    Bulk operations for countries.
+    """
+    @api.doc('bulk_create_countries')
+    @api.response(200, 'Bulk create success')
+    @api.response(400, 'Validation Error', error_response)
+    @api.response(500, 'Internal Server Error', error_response)
+    def post(self):
+        """
+        Bulk create countries.
+        Expects JSON array of country objects.
+        """
+        try:
+            data = request.json
+            if not isinstance(data, list):
+                return {'error': 'Request body must be a JSON array'}, 400
+            result = ctq.bulk_create(data)
+            return result, 200 if result['failed'] == 0 else 207
+        except Exception as e:
+            return {'error': str(e)}, 500
+
+    @api.doc('bulk_update_countries')
+    @api.response(200, 'Bulk update success')
+    @api.response(400, 'Validation Error', error_response)
+    @api.response(500, 'Internal Server Error', error_response)
+    def put(self):
+        """
+        Bulk update countries.
+        Expects JSON array of update objects: [{"id": "name", "fields": {...}}]
+        """
+        try:
+            data = request.json
+            if not isinstance(data, list):
+                return {'error': 'Request body must be a JSON array'}, 400
+            result = ctq.bulk_update(data)
+            return result, 200 if result['failed'] == 0 else 207
+        except Exception as e:
+            return {'error': str(e)}, 500
+
+    @api.doc('bulk_delete_countries')
+    @api.response(200, 'Bulk delete success')
+    @api.response(400, 'Validation Error', error_response)
+    @api.response(500, 'Internal Server Error', error_response)
+    def delete(self):
+        """
+        Bulk delete countries.
+        Expects JSON array of country names.
+        """
+        try:
+            data = request.json
+            if not isinstance(data, list):
+                return {'error': 'Request body must be a JSON array'}, 400
+            result = ctq.bulk_delete(data)
+            return result, 200 if result['failed'] == 0 else 207
+        except Exception as e:
+            return {'error': str(e)}, 500
+
+
+@api.route(CITIES_BULK_EP)
+class CitiesBulk(Resource):
+    """
+    Bulk operations for cities.
+    """
+    @api.doc('bulk_create_cities')
+    @api.response(200, 'Bulk create success')
+    @api.response(400, 'Validation Error', error_response)
+    @api.response(500, 'Internal Server Error', error_response)
+    def post(self):
+        """
+        Bulk create cities.
+        Expects JSON array of city objects.
+        """
+        try:
+            data = request.json
+            if not isinstance(data, list):
+                return {'error': 'Request body must be a JSON array'}, 400
+            result = cq.bulk_create(data)
+            return result, 200 if result['failed'] == 0 else 207
+        except Exception as e:
+            return {'error': str(e)}, 500
+
+    @api.doc('bulk_update_cities')
+    @api.response(200, 'Bulk update success')
+    @api.response(400, 'Validation Error', error_response)
+    @api.response(500, 'Internal Server Error', error_response)
+    def put(self):
+        """
+        Bulk update cities.
+        Expects JSON array of update objects: [{"id": "name", "fields": {...}}]
+        """
+        try:
+            data = request.json
+            if not isinstance(data, list):
+                return {'error': 'Request body must be a JSON array'}, 400
+            result = cq.bulk_update(data)
+            return result, 200 if result['failed'] == 0 else 207
+        except Exception as e:
+            return {'error': str(e)}, 500
+
+    @api.doc('bulk_delete_cities')
+    @api.response(200, 'Bulk delete success')
+    @api.response(400, 'Validation Error', error_response)
+    @api.response(500, 'Internal Server Error', error_response)
+    def delete(self):
+        """
+        Bulk delete cities.
+        Expects JSON array of delete objects:
+        [{"name": "city", "state_code": "ST"}]
+        """
+        try:
+            data = request.json
+            if not isinstance(data, list):
+                return {'error': 'Request body must be a JSON array'}, 400
+            result = cq.bulk_delete(data)
+            return result, 200 if result['failed'] == 0 else 207
+        except Exception as e:
+            return {'error': str(e)}, 500
+
+
+@api.route(STATES_BULK_EP)
+class StatesBulk(Resource):
+    """
+    Bulk operations for states.
+    """
+    @api.doc('bulk_create_states')
+    @api.response(200, 'Bulk create success')
+    @api.response(400, 'Validation Error', error_response)
+    @api.response(500, 'Internal Server Error', error_response)
+    def post(self):
+        """
+        Bulk create states.
+        Expects JSON array of state objects.
+        """
+        try:
+            data = request.json
+            if not isinstance(data, list):
+                return {'error': 'Request body must be a JSON array'}, 400
+            result = stq.bulk_create(data)
+            return result, 200 if result['failed'] == 0 else 207
+        except Exception as e:
+            return {'error': str(e)}, 500
+
+    @api.doc('bulk_update_states')
+    @api.response(200, 'Bulk update success')
+    @api.response(400, 'Validation Error', error_response)
+    @api.response(500, 'Internal Server Error', error_response)
+    def put(self):
+        """
+        Bulk update states.
+        Expects JSON array of update objects: [{"id": "name", "fields": {...}}]
+        """
+        try:
+            data = request.json
+            if not isinstance(data, list):
+                return {'error': 'Request body must be a JSON array'}, 400
+            result = stq.bulk_update(data)
+            return result, 200 if result['failed'] == 0 else 207
+        except Exception as e:
+            return {'error': str(e)}, 500
+
+    @api.doc('bulk_delete_states')
+    @api.response(200, 'Bulk delete success')
+    @api.response(400, 'Validation Error', error_response)
+    @api.response(500, 'Internal Server Error', error_response)
+    def delete(self):
+        """
+        Bulk delete states.
+        Expects JSON array of state names.
+        """
+        try:
+            data = request.json
+            if not isinstance(data, list):
+                return {'error': 'Request body must be a JSON array'}, 400
+            result = stq.bulk_delete(data)
+            return result, 200 if result['failed'] == 0 else 207
+        except Exception as e:
+            return {'error': str(e)}, 500
+
+
 if __name__ == '__main__':
     app.run(debug=True)

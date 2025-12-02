@@ -208,3 +208,126 @@ def search(name: str = None, state_code: str = None,
             results[state_name] = state_data
 
     return results
+
+
+def bulk_create(records: list) -> dict:
+    """
+    Create multiple states at once.
+
+    Args:
+        records: List of state dictionaries to create
+
+    Returns:
+        Dictionary with success count, failure count, errors, and created IDs
+    """
+    if not isinstance(records, list):
+        raise ValueError("Records must be a list")
+
+    results = {
+        "success": 0,
+        "failed": 0,
+        "errors": [],
+        "ids": []
+    }
+
+    for index, record in enumerate(records):
+        try:
+            new_id = create(record)
+            results["ids"].append(new_id)
+            results["success"] += 1
+        except (ValueError, validation.ValidationError) as e:
+            results["failed"] += 1
+            results["errors"].append({
+                "index": index,
+                "record": record.get(NAME, f"record_{index}"),
+                "error": str(e)
+            })
+
+    return results
+
+
+def bulk_update(updates: list) -> dict:
+    """
+    Update multiple states at once.
+
+    Args:
+        updates: List of update dictionaries with 'id' and 'fields'
+                 Example: [{"id": "New York",
+                            "fields": {"capital": "Albany"}}, ...]
+
+    Returns:
+        Dictionary with success count, failure count, and errors
+    """
+    if not isinstance(updates, list):
+        raise ValueError("Updates must be a list")
+
+    results = {
+        "success": 0,
+        "failed": 0,
+        "errors": []
+    }
+
+    for update_item in updates:
+        if not isinstance(update_item, dict):
+            results["failed"] += 1
+            results["errors"].append({
+                "id": "unknown",
+                "error": "Update item must be a dictionary"
+            })
+            continue
+
+        state_id = update_item.get('id')
+        fields = update_item.get('fields')
+
+        if not state_id or not fields:
+            results["failed"] += 1
+            results["errors"].append({
+                "id": state_id or "unknown",
+                "error": "Update item must have 'id' and 'fields'"
+            })
+            continue
+
+        try:
+            update(state_id, fields)
+            results["success"] += 1
+        except (ValueError, validation.ValidationError) as e:
+            results["failed"] += 1
+            results["errors"].append({
+                "id": state_id,
+                "error": str(e)
+            })
+
+    return results
+
+
+def bulk_delete(ids: list) -> dict:
+    """
+    Delete multiple states at once.
+
+    Args:
+        ids: List of state IDs (names) to delete
+
+    Returns:
+        Dictionary with success count, failure count, and errors
+    """
+    if not isinstance(ids, list):
+        raise ValueError("IDs must be a list")
+
+    results = {
+        "success": 0,
+        "failed": 0,
+        "errors": []
+    }
+
+    for state_id in ids:
+        try:
+            delete(state_id)
+            results["success"] += 1
+        except (ValueError, validation.ValidationError) as e:
+            results["failed"] += 1
+            results["errors"].append({
+                "id": state_id,
+                "error": str(e)
+            })
+
+    return results

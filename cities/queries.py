@@ -222,3 +222,146 @@ def search(name: str = None, state_code: str = None) -> dict:
         if match:
             results[city_name] = city_data
     return results
+
+
+def bulk_create(records: list) -> dict:
+    """
+    Create multiple cities at once.
+
+    Args:
+        records: List of city dictionaries to create
+
+    Returns:
+        Dictionary with success count, failure count, errors, and created IDs
+    """
+    if not isinstance(records, list):
+        raise ValueError("Records must be a list")
+
+    results = {
+        "success": 0,
+        "failed": 0,
+        "errors": [],
+        "ids": []
+    }
+
+    for index, record in enumerate(records):
+        try:
+            new_id = create(record)
+            results["ids"].append(new_id)
+            results["success"] += 1
+        except (ValueError, validation.ValidationError) as e:
+            results["failed"] += 1
+            results["errors"].append({
+                "index": index,
+                "record": record.get(NAME, f"record_{index}"),
+                "error": str(e)
+            })
+
+    return results
+
+
+def bulk_update(updates: list) -> dict:
+    """
+    Update multiple cities at once.
+
+    Args:
+        updates: List of update dictionaries with 'id' and 'fields'
+                 Example: [{"id": "New York",
+                            "fields": {"state_code": "NY"}}, ...]
+
+    Returns:
+        Dictionary with success count, failure count, and errors
+    """
+    if not isinstance(updates, list):
+        raise ValueError("Updates must be a list")
+
+    results = {
+        "success": 0,
+        "failed": 0,
+        "errors": []
+    }
+
+    for update_item in updates:
+        if not isinstance(update_item, dict):
+            results["failed"] += 1
+            results["errors"].append({
+                "id": "unknown",
+                "error": "Update item must be a dictionary"
+            })
+            continue
+
+        city_id = update_item.get('id')
+        fields = update_item.get('fields')
+
+        if not city_id or not fields:
+            results["failed"] += 1
+            results["errors"].append({
+                "id": city_id or "unknown",
+                "error": "Update item must have 'id' and 'fields'"
+            })
+            continue
+
+        try:
+            update(city_id, fields)
+            results["success"] += 1
+        except (ValueError, validation.ValidationError) as e:
+            results["failed"] += 1
+            results["errors"].append({
+                "id": city_id,
+                "error": str(e)
+            })
+
+    return results
+
+
+def bulk_delete(deletes: list) -> dict:
+    """
+    Delete multiple cities at once.
+
+    Args:
+        deletes: List of delete dictionaries with 'name' and 'state_code'
+                 Example: [{"name": "New York", "state_code": "NY"}, ...]
+
+    Returns:
+        Dictionary with success count, failure count, and errors
+    """
+    if not isinstance(deletes, list):
+        raise ValueError("Deletes must be a list")
+
+    results = {
+        "success": 0,
+        "failed": 0,
+        "errors": []
+    }
+
+    for delete_item in deletes:
+        if not isinstance(delete_item, dict):
+            results["failed"] += 1
+            results["errors"].append({
+                "id": "unknown",
+                "error": "Delete item must be a dictionary"
+            })
+            continue
+
+        city_name = delete_item.get('name')
+        state_code = delete_item.get('state_code')
+
+        if not city_name or not state_code:
+            results["failed"] += 1
+            results["errors"].append({
+                "id": city_name or "unknown",
+                "error": "Delete item must have 'name' and 'state_code'"
+            })
+            continue
+
+        try:
+            delete(city_name, state_code)
+            results["success"] += 1
+        except (ValueError, validation.ValidationError) as e:
+            results["failed"] += 1
+            results["errors"].append({
+                "id": f"{city_name}, {state_code}",
+                "error": str(e)
+            })
+
+    return results
