@@ -97,7 +97,7 @@ def find_by_state_code(state_code: str) -> Optional[dict]:
 def create(flds: dict) -> str:
     """Create a new state."""
     # Validate required fields
-    validation.validate_required_fields(flds, [NAME, STATE_CODE, CAPITAL])
+    validation.validate_required_fields(flds, [NAME, STATE_CODE])
 
     # Validate no extra fields (allow optional fields)
     allowed = [NAME, STATE_CODE, CAPITAL, POPULATION]
@@ -110,9 +110,10 @@ def create(flds: dict) -> str:
     # Validate state code format (2 uppercase letters)
     validation.validate_state_code(flds[STATE_CODE], 'state_code')
 
-    # Validate capital
-    validation.validate_string_length(flds[CAPITAL], 'capital',
-                                      min_length=1, max_length=100)
+    # Optional: validate capital if present
+    if CAPITAL in flds:
+        validation.validate_string_length(flds[CAPITAL], 'capital',
+                                          min_length=1, max_length=100)
 
     # Optional: validate population if present
     if POPULATION in flds:

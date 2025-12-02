@@ -81,8 +81,8 @@ def test_create_success():
 def test_create_multiple_states():
     """Test creating multiple states"""
     timestamp = int(time.time())
-    state1 = {sq.NAME: f"State1_{timestamp}", sq.STATE_CODE: "S1"}
-    state2 = {sq.NAME: f"State2_{timestamp}", sq.STATE_CODE: "S2"}
+    state1 = {sq.NAME: f"State1_{timestamp}", sq.STATE_CODE: "AA"}
+    state2 = {sq.NAME: f"State2_{timestamp}", sq.STATE_CODE: "BB"}
     
     id1 = sq.create(state1)
     id2 = sq.create(state2)
