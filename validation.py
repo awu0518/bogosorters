@@ -235,6 +235,29 @@ def validate_positive_integer(value: Any, field_name: str) -> None:
     validate_integer(value, field_name, min_value=1)
 
 
+def validate_pagination_params(page: Any, limit: Any,
+                               field_page: str = 'page',
+                               field_limit: str = 'limit',
+                               max_limit: int = 1000) -> tuple[int, int]:
+    try:
+        page_int = int(page)
+    except Exception:
+        raise ValidationError(f"{field_page} must be an integer")
+    if page_int < 1:
+        raise ValidationError(f"{field_page} must be at least 1")
+
+    try:
+        limit_int = int(limit)
+    except Exception:
+        raise ValidationError(f"{field_limit} must be an integer")
+    if limit_int < 1:
+        raise ValidationError(f"{field_limit} must be at least 1")
+    if limit_int > max_limit:
+        raise ValidationError(f"{field_limit} must be at most {max_limit}")
+
+    return page_int, limit_int
+
+
 def validate_type(value: Any, field_name: str, expected_type: type) -> None:
     """
     Validate value type.
