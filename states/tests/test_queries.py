@@ -425,4 +425,118 @@ def test_export_to_csv_excludes_mongo_id():
     assert "_id" not in result
 
 
+# ==================== Population Range Feature Tests ====================
+
+def test_get_by_population_range_with_bounds():
+    """Test get_by_population_range with both min and max"""
+    timestamp = int(time.time())
+    states = [
+        {sq.NAME: f"SmallState_{timestamp}", sq.STATE_CODE: "SA",
+         sq.POPULATION: 100000},
+        {sq.NAME: f"MedState_{timestamp}", sq.STATE_CODE: "MB",
+         sq.POPULATION: 500000},
+        {sq.NAME: f"BigState_{timestamp}", sq.STATE_CODE: "BC",
+         sq.POPULATION: 1000000},
+    ]
+
+    for state in states:
+        sq.create(state)
+
+    try:
+        results = sq.get_by_population_range(min_pop=200000, max_pop=800000)
+        assert f"MedState_{timestamp}" in results
+        assert f"SmallState_{timestamp}" not in results
+        assert f"BigState_{timestamp}" not in results
+    finally:
+        for state in states:
+            sq.delete(state[sq.NAME])
+
+
+def test_get_by_population_range_min_only():
+    """Test get_by_population_range with only min_pop"""
+    timestamp = int(time.time())
+    states = [
+        {sq.NAME: f"Small_{timestamp}", sq.STATE_CODE: "SD",
+         sq.POPULATION: 100000},
+        {sq.NAME: f"Big_{timestamp}", sq.STATE_CODE: "BE",
+         sq.POPULATION: 1000000},
+    ]
+
+    for state in states:
+        sq.create(state)
+
+    try:
+        results = sq.get_by_population_range(min_pop=500000)
+        assert f"Big_{timestamp}" in results
+        assert f"Small_{timestamp}" not in results
+    finally:
+        for state in states:
+            sq.delete(state[sq.NAME])
+
+
+def test_get_by_population_range_max_only():
+    """Test get_by_population_range with only max_pop"""
+    timestamp = int(time.time())
+    states = [
+        {sq.NAME: f"Tiny_{timestamp}", sq.STATE_CODE: "TF",
+         sq.POPULATION: 50000},
+        {sq.NAME: f"Large_{timestamp}", sq.STATE_CODE: "LG",
+         sq.POPULATION: 5000000},
+    ]
+
+    for state in states:
+        sq.create(state)
+
+    try:
+        results = sq.get_by_population_range(max_pop=100000)
+        assert f"Tiny_{timestamp}" in results
+        assert f"Large_{timestamp}" not in results
+    finally:
+        for state in states:
+            sq.delete(state[sq.NAME])
+
+
+def test_get_by_population_range_no_bounds():
+    """Test get_by_population_range with no bounds returns all with population"""
+    timestamp = int(time.time())
+    state_with_pop = {
+        sq.NAME: f"WithPop_{timestamp}",
+        sq.STATE_CODE: "WP",
+        sq.POPULATION: 100000
+    }
+    state_without_pop = {
+        sq.NAME: f"NoPop_{timestamp}",
+        sq.STATE_CODE: "NP"
+    }
+
+    sq.create(state_with_pop)
+    sq.create(state_without_pop)
+
+    try:
+        results = sq.get_by_population_range()
+        assert f"WithPop_{timestamp}" in results
+        assert f"NoPop_{timestamp}" not in results
+    finally:
+        sq.delete(state_with_pop[sq.NAME])
+        sq.delete(state_without_pop[sq.NAME])
+
+
+def test_get_by_population_range_negative_min():
+    """Test get_by_population_range raises for negative min_pop"""
+    with pytest.raises(ValueError, match="min_pop cannot be negative"):
+        sq.get_by_population_range(min_pop=-100)
+
+
+def test_get_by_population_range_negative_max():
+    """Test get_by_population_range raises for negative max_pop"""
+    with pytest.raises(ValueError, match="max_pop cannot be negative"):
+        sq.get_by_population_range(max_pop=-100)
+
+
+def test_get_by_population_range_min_greater_than_max():
+    """Test get_by_population_range raises when min > max"""
+    with pytest.raises(ValueError, match="min_pop cannot be greater"):
+        sq.get_by_population_range(min_pop=1000, max_pop=500)
+
+
 

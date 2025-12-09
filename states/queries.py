@@ -404,6 +404,48 @@ def get_regions() -> List[str]:
     return list(VALID_REGIONS)
 
 
+def get_by_population_range(
+    min_pop: int = None,
+    max_pop: int = None
+) -> dict:
+    """
+    Get all states within a population range.
+
+    Args:
+        min_pop: Minimum population (inclusive). If None, no lower bound.
+        max_pop: Maximum population (inclusive). If None, no upper bound.
+
+    Returns:
+        Dictionary of states within the specified population range.
+
+    Raises:
+        ValueError: If min_pop > max_pop or if values are negative.
+    """
+    if min_pop is not None and min_pop < 0:
+        raise ValueError("min_pop cannot be negative")
+    if max_pop is not None and max_pop < 0:
+        raise ValueError("max_pop cannot be negative")
+    if min_pop is not None and max_pop is not None and min_pop > max_pop:
+        raise ValueError("min_pop cannot be greater than max_pop")
+
+    states = read()
+    results = {}
+
+    for name, data in states.items():
+        pop = data.get(POPULATION)
+        if pop is None:
+            continue
+
+        if min_pop is not None and pop < min_pop:
+            continue
+        if max_pop is not None and pop > max_pop:
+            continue
+
+        results[name] = data
+
+    return results
+
+
 def export_to_json(states_data: dict = None, indent: int = 2) -> str:
     """
     Export states data to JSON format.
