@@ -1,8 +1,11 @@
 """
 This file deals with our state-level data.
 """
+import csv
+import io
+import json
 from random import randint
-from typing import Optional
+from typing import Optional, List
 import data.db_connect as dbc
 import validation
 
@@ -15,11 +18,22 @@ STATE_CODE = 'state_code'
 ABBREVIATION = 'abbreviation'  # Alias for state_code
 CAPITAL = 'capital'
 POPULATION = 'population'
+REGION = 'region'
+
+# Valid US regions
+VALID_REGIONS = [
+    'Northeast',
+    'Southeast',
+    'Midwest',
+    'Southwest',
+    'West',
+]
 
 SAMPLE_STATE = {
     NAME: 'New York',
     STATE_CODE: 'NY',
     CAPITAL: 'Albany',
+    REGION: 'Northeast',
 }
 
 
@@ -100,7 +114,7 @@ def create(flds: dict) -> str:
     validation.validate_required_fields(flds, [NAME, STATE_CODE])
 
     # Validate no extra fields (allow optional fields)
-    allowed = [NAME, STATE_CODE, CAPITAL, POPULATION]
+    allowed = [NAME, STATE_CODE, CAPITAL, POPULATION, REGION]
     validation.validate_no_extra_fields(flds, allowed)
 
     # Validate name
@@ -118,6 +132,10 @@ def create(flds: dict) -> str:
     # Optional: validate population if present
     if POPULATION in flds:
         validation.validate_positive_integer(flds[POPULATION], 'population')
+
+    # Optional: validate region if present
+    if REGION in flds:
+        validate_region(flds[REGION])
 
     new_id = dbc.create(STATE_COLLECTION, flds)
     return str(new_id.inserted_id)
@@ -144,7 +162,7 @@ def update(state_id: str, flds: dict) -> bool:
         raise ValueError(f'Bad type for {type(flds)=}')
 
     # Validate no extra fields
-    allowed = [NAME, STATE_CODE, CAPITAL, POPULATION]
+    allowed = [NAME, STATE_CODE, CAPITAL, POPULATION, REGION]
     validation.validate_no_extra_fields(flds, allowed)
 
     # Validate name if present
@@ -164,6 +182,10 @@ def update(state_id: str, flds: dict) -> bool:
     # Validate population if present
     if POPULATION in flds:
         validation.validate_positive_integer(flds[POPULATION], 'population')
+
+    # Validate region if present
+    if REGION in flds:
+        validate_region(flds[REGION])
 
     states = read()
     if state_id not in states:
@@ -331,3 +353,118 @@ def bulk_delete(ids: list) -> dict:
             })
 
     return results
+
+
+def validate_region(region: str) -> None:
+    """
+    Validate that a region is one of the valid US regions.
+
+    Args:
+        region: The region string to validate
+
+    Raises:
+        ValueError: If the region is not valid
+    """
+    if not isinstance(region, str):
+        type_name = type(region).__name__
+        raise ValueError(f"Region must be a string, got {type_name}")
+    if region not in VALID_REGIONS:
+        valid = ', '.join(VALID_REGIONS)
+        raise ValueError(f"Invalid region '{region}'. Must be one of: {valid}")
+
+
+def get_by_region(region: str) -> dict:
+    """
+    Get all states in a specific region.
+
+    Args:
+        region: The region to filter by (case-sensitive)
+
+    Returns:
+        Dictionary of states in the specified region
+
+    Raises:
+        ValueError: If the region is not valid
+    """
+    validate_region(region)
+    states = read()
+    return {
+        name: data for name, data in states.items()
+        if data.get(REGION) == region
+    }
+
+
+def get_regions() -> List[str]:
+    """
+    Get list of all valid regions.
+
+    Returns:
+        List of valid region names
+    """
+    return list(VALID_REGIONS)
+
+
+def export_to_json(states_data: dict = None, indent: int = 2) -> str:
+    """
+    Export states data to JSON format.
+
+    Args:
+        states_data: Dictionary of states to export.
+                     If None, exports all states.
+        indent: Number of spaces for JSON indentation (default 2)
+
+    Returns:
+        JSON string representation of the states data
+    """
+    if states_data is None:
+        states_data = read()
+
+    # Convert to list format for cleaner JSON output
+    states_list = []
+    for name, data in states_data.items():
+        state_record = {NAME: name}
+        state_record.update({k: v for k, v in data.items() if k != '_id'})
+        states_list.append(state_record)
+
+    return json.dumps(states_list, indent=indent)
+
+
+def export_to_csv(states_data: dict = None) -> str:
+    """
+    Export states data to CSV format.
+
+    Args:
+        states_data: Dictionary of states to export.
+                     If None, exports all states.
+
+    Returns:
+        CSV string representation of the states data
+    """
+    if states_data is None:
+        states_data = read()
+
+    if not states_data:
+        return ""
+
+    # Determine all possible fields from the data
+    all_fields = set()
+    for data in states_data.values():
+        all_fields.update(data.keys())
+
+    # Remove MongoDB _id field and ensure NAME is first
+    all_fields.discard('_id')
+    all_fields.discard(NAME)
+    fieldnames = [NAME] + sorted(all_fields)
+
+    output = io.StringIO()
+    writer = csv.DictWriter(
+        output, fieldnames=fieldnames, extrasaction='ignore'
+    )
+    writer.writeheader()
+
+    for name, data in states_data.items():
+        row = {NAME: name}
+        row.update({k: v for k, v in data.items() if k != '_id'})
+        writer.writerow(row)
+
+    return output.getvalue()

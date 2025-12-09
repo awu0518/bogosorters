@@ -4,6 +4,7 @@ Tests for states.queries module
 from unittest.mock import patch
 import pytest
 import time
+import json
 
 import states.queries as sq
 from copy import deepcopy
@@ -242,4 +243,186 @@ def test_is_valid_id():
     assert sq.is_valid_id("California") is True
     assert sq.is_valid_id("") is False
     assert sq.is_valid_id(123) is False
+
+
+# ==================== Region Feature Tests ====================
+
+def test_get_regions():
+    """Test get_regions returns valid regions list"""
+    regions = sq.get_regions()
+    assert isinstance(regions, list)
+    assert len(regions) == 5
+    assert 'Northeast' in regions
+    assert 'Southeast' in regions
+    assert 'Midwest' in regions
+    assert 'Southwest' in regions
+    assert 'West' in regions
+
+
+def test_validate_region_valid():
+    """Test validate_region with valid regions"""
+    # Should not raise for valid regions
+    for region in sq.VALID_REGIONS:
+        sq.validate_region(region)  # No exception means pass
+
+
+def test_validate_region_invalid():
+    """Test validate_region raises for invalid region"""
+    with pytest.raises(ValueError, match="Invalid region"):
+        sq.validate_region("InvalidRegion")
+
+
+def test_validate_region_non_string():
+    """Test validate_region raises for non-string input"""
+    with pytest.raises(ValueError, match="must be a string"):
+        sq.validate_region(123)
+
+
+def test_get_by_region():
+    """Test get_by_region function"""
+    timestamp = int(time.time())
+    test_state = {
+        sq.NAME: f"RegionTestState_{timestamp}",
+        sq.STATE_CODE: "RT",
+        sq.REGION: "Northeast"
+    }
+    sq.create(test_state)
+
+    try:
+        results = sq.get_by_region("Northeast")
+        assert isinstance(results, dict)
+        assert test_state[sq.NAME] in results
+        assert results[test_state[sq.NAME]][sq.REGION] == "Northeast"
+    finally:
+        sq.delete(test_state[sq.NAME])
+
+
+def test_get_by_region_invalid():
+    """Test get_by_region raises for invalid region"""
+    with pytest.raises(ValueError, match="Invalid region"):
+        sq.get_by_region("InvalidRegion")
+
+
+def test_create_with_region():
+    """Test create function with region field"""
+    timestamp = int(time.time())
+    test_state = {
+        sq.NAME: f"RegionState_{timestamp}",
+        sq.STATE_CODE: "RG",
+        sq.CAPITAL: "RegionCapital",
+        sq.REGION: "Southwest"
+    }
+    new_id = sq.create(test_state)
+    assert new_id is not None
+
+    try:
+        state = sq.read_one(test_state[sq.NAME])
+        assert state[sq.REGION] == "Southwest"
+    finally:
+        sq.delete(test_state[sq.NAME])
+
+
+def test_create_with_invalid_region():
+    """Test create raises for invalid region"""
+    test_state = {
+        sq.NAME: "InvalidRegionState",
+        sq.STATE_CODE: "IR",
+        sq.REGION: "InvalidRegion"
+    }
+    with pytest.raises(ValueError, match="Invalid region"):
+        sq.create(test_state)
+
+
+def test_update_with_region():
+    """Test update function with region field"""
+    timestamp = int(time.time())
+    test_state = {
+        sq.NAME: f"UpdateRegionState_{timestamp}",
+        sq.STATE_CODE: "UR",
+        sq.REGION: "West"
+    }
+    sq.create(test_state)
+
+    try:
+        sq.update(test_state[sq.NAME], {sq.REGION: "Midwest"})
+        state = sq.read_one(test_state[sq.NAME])
+        assert state[sq.REGION] == "Midwest"
+    finally:
+        sq.delete(test_state[sq.NAME])
+
+
+# ==================== Export Feature Tests ====================
+
+def test_export_to_json():
+    """Test export_to_json function"""
+    test_data = {
+        "TestState1": {sq.NAME: "TestState1", sq.STATE_CODE: "T1"},
+        "TestState2": {sq.NAME: "TestState2", sq.STATE_CODE: "T2"}
+    }
+    result = sq.export_to_json(test_data)
+
+    assert isinstance(result, str)
+    parsed = json.loads(result)
+    assert isinstance(parsed, list)
+    assert len(parsed) == 2
+
+
+def test_export_to_json_with_indent():
+    """Test export_to_json with custom indent"""
+    test_data = {
+        "TestState": {sq.NAME: "TestState", sq.STATE_CODE: "TS"}
+    }
+    result = sq.export_to_json(test_data, indent=4)
+    # Check that it's properly indented (4 spaces)
+    assert "    " in result
+
+
+def test_export_to_json_excludes_mongo_id():
+    """Test export_to_json excludes MongoDB _id field"""
+    test_data = {
+        "TestState": {
+            sq.NAME: "TestState",
+            sq.STATE_CODE: "TS",
+            "_id": "some_mongo_id"
+        }
+    }
+    result = sq.export_to_json(test_data)
+    parsed = json.loads(result)
+    assert "_id" not in parsed[0]
+
+
+def test_export_to_csv():
+    """Test export_to_csv function"""
+    test_data = {
+        "TestState1": {sq.NAME: "TestState1", sq.STATE_CODE: "T1"},
+        "TestState2": {sq.NAME: "TestState2", sq.STATE_CODE: "T2"}
+    }
+    result = sq.export_to_csv(test_data)
+
+    assert isinstance(result, str)
+    lines = result.strip().split('\n')
+    assert len(lines) == 3  # header + 2 rows
+    assert "name" in lines[0]
+    assert "state_code" in lines[0]
+
+
+def test_export_to_csv_empty():
+    """Test export_to_csv with empty data"""
+    result = sq.export_to_csv({})
+    assert result == ""
+
+
+def test_export_to_csv_excludes_mongo_id():
+    """Test export_to_csv excludes MongoDB _id field"""
+    test_data = {
+        "TestState": {
+            sq.NAME: "TestState",
+            sq.STATE_CODE: "TS",
+            "_id": "some_mongo_id"
+        }
+    }
+    result = sq.export_to_csv(test_data)
+    assert "_id" not in result
+
+
 
