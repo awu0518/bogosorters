@@ -4,6 +4,7 @@ This file deals with our state-level data.
 import csv
 import io
 import json
+import time
 from random import randint
 from typing import Optional, List
 import data.db_connect as dbc
@@ -21,6 +22,7 @@ POPULATION = 'population'
 REGION = 'region'
 
 state_cache = {}
+CACHE_EXPIRY_SECONDS = 300  # 5 minutes
 
 # Valid US regions
 VALID_REGIONS = [
@@ -65,7 +67,15 @@ def num_states() -> int:
 def read() -> dict:
     """Read all states from MongoDB as a dictionary."""
     states = dbc.read_dict(STATE_COLLECTION, key=NAME)
-    state_cache.update(states)
+
+    # Update cache with timestamp
+    current_time = time.time()
+    for name, data in states.items():
+        state_cache[name] = {
+            'data': data,
+            'timestamp': current_time
+        }
+
     return states
 
 
@@ -90,8 +100,13 @@ def read_one(state_id: str) -> dict:
     Retrieve a single state by ID (name).
     Returns a copy of the state data.
     """
+    # Check cache and expiration
     if state_id in state_cache:
-        return state_cache[state_id].copy()
+        entry = state_cache[state_id]
+        if time.time() - entry['timestamp'] < CACHE_EXPIRY_SECONDS:
+            return entry['data'].copy()
+        else:
+            del state_cache[state_id]  # Expired
 
     states = read()
     if state_id not in states:
@@ -148,7 +163,10 @@ def create(flds: dict) -> str:
 
     # Update cache
     if NAME in flds:
-        state_cache[flds[NAME]] = flds.copy()
+        state_cache[flds[NAME]] = {
+            'data': flds.copy(),
+            'timestamp': time.time()
+        }
 
     return str(new_id.inserted_id)
 
@@ -217,7 +235,10 @@ def update(state_id: str, flds: dict) -> bool:
             # without a read, so just letting it be a cache miss next time
             # is safer/simpler
         else:
-            state_cache[state_id].update(flds)
+            # Update existing cache entry
+            if state_id in state_cache:
+                state_cache[state_id]['data'].update(flds)
+                state_cache[state_id]['timestamp'] = time.time()
 
     dbc.update(STATE_COLLECTION, {NAME: state_id}, flds)
     return True
