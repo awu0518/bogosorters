@@ -145,11 +145,11 @@ def create(flds: dict) -> str:
         validate_region(flds[REGION])
 
     new_id = dbc.create(STATE_COLLECTION, flds)
-    
+
     # Update cache
     if NAME in flds:
         state_cache[flds[NAME]] = flds.copy()
-        
+
     return str(new_id.inserted_id)
 
 
@@ -161,11 +161,11 @@ def delete(state_id: str) -> bool:
     ret = dbc.delete(STATE_COLLECTION, {NAME: state_id})
     if ret < 1:
         raise ValueError(f'State not found: {state_id}')
-        
+
     # Remove from cache
     if state_id in state_cache:
         del state_cache[state_id]
-        
+
     return True
 
 
@@ -207,17 +207,18 @@ def update(state_id: str, flds: dict) -> bool:
     states = read()
     if state_id not in states:
         raise ValueError(f'No such state: {state_id}')
-        
+
     # Update cache
     if state_id in state_cache:
         # If name is changed, we need to handle key change
         if NAME in flds and flds[NAME] != state_id:
             del state_cache[state_id]
-            # We don't have the full new record to re-cache safely without a read, 
-            # so just letting it be a cache miss next time is safer/simpler
+            # We don't have the full new record to re-cache safely
+            # without a read, so just letting it be a cache miss next time
+            # is safer/simpler
         else:
             state_cache[state_id].update(flds)
-            
+
     dbc.update(STATE_COLLECTION, {NAME: state_id}, flds)
     return True
 
