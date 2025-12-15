@@ -24,7 +24,7 @@ api = Api(
     title='Geographic Database API',
     description='A comprehensive REST API for managing geographic data '
                 'including countries, states, and cities',
-    doc='/docs/',  # Swagger UI will be available at /docs/
+    doc='/',  # Swagger UI will be available at /docs/
     contact_email='support@geodatabase.com',
     authorizations={
         'apikey': {
